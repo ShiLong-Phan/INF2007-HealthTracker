@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.healthtracker"
+    namespace = "com.inf2007.healthtracker"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.healthtracker"
+        applicationId = "com.inf2007.healthtracker"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.androidx.navigation.runtime.android)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.firebase.auth.ktx)
+    implementation(libs.firebase.firestore.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -61,6 +62,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    implementation(platform("com.google.firebase:firebase-bom:33.8.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.9.0"))
     implementation("com.google.firebase:firebase-analytics")
 }

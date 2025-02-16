@@ -1,4 +1,4 @@
-package com.example.healthtracker
+package com.inf2007.healthtracker
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4

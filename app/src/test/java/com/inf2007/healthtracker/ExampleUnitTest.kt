@@ -1,4 +1,4 @@
-package com.example.healthtracker
+package com.inf2007.healthtracker
 
 import org.junit.Test
 

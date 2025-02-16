@@ -1,26 +1,36 @@
 {
   "project_info": {
-    "project_number": "164832955040",
-    "project_id": "healthtracker-8247d",
-    "storage_bucket": "healthtracker-8247d.firebasestorage.app"
+    "project_number": "1050563982003",
+    "project_id": "androidbeacon-390ce",
+    "storage_bucket": "androidbeacon-390ce.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:164832955040:android:36656c080cc438072e97c5",
+        "mobilesdk_app_id": "1:1050563982003:android:ae213d1a8f4a33425976c6",
         "android_client_info": {
-          "package_name": "com.example.healthtracker"
+          "package_name": "com.inf2007.healthtracker"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1050563982003-98j8725d3g0tanj2pn67e7pn15sst8mr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyBVWtO4YNWHn93tXiMYug8_loDl-ZGtV6E"
+          "current_key": "AIzaSyBxJqSPZ61DDGxhozybVCGNongmtsSTsRc"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1050563982003-98j8725d3g0tanj2pn67e7pn15sst8mr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

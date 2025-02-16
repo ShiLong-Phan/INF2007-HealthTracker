@@ -1,4 +1,4 @@
-package com.example.healthtracker.ui.theme
+package com.inf2007.healthtracker.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

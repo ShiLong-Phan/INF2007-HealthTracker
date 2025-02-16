@@ -1,4 +1,4 @@
-package com.example.healthtracker
+package com.inf2007.healthtracker
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -12,9 +12,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
-import com.example.healthtracker.ui.theme.HealthTrackerTheme
+import com.inf2007.healthtracker.ui.theme.HealthTrackerTheme
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
+import com.inf2007.healthtracker.NavGraph
 
 
 class MainActivity : ComponentActivity() {

@@ -1,4 +1,4 @@
-package com.example.healthtracker.ui.theme
+package com.inf2007.healthtracker.ui.theme
 
 import android.app.Activity
 import android.os.Build

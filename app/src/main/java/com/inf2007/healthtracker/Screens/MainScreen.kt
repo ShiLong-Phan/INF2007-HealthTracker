@@ -1,4 +1,4 @@
-package com.example.healthtracker.Screens
+package com.inf2007.healthtracker.Screens
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
