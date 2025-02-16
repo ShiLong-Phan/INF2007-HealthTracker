@@ -22,106 +22,107 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.firestore.FirebaseFirestore
-import android.util.Patterns
-import androidx.compose.foundation.layout.Box
+import android.widget.Toast
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun SignUpScreen(
     navController: NavController,
     modifier: Modifier = Modifier
 ) {
-    var username by rememberSaveable { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
-    var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var isLoading by rememberSaveable { mutableStateOf(false) }
+    var nameErrorMessage by rememberSaveable { mutableStateOf("") }
+    var emailErrorMessage by rememberSaveable { mutableStateOf("") }
+    var passwordErrorMessage by rememberSaveable { mutableStateOf("") }
+    val context = LocalContext.current
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         TextField(
-            value = username,
-            onValueChange = { username = it },
-            label = { Text("Username") },
-            modifier = Modifier.fillMaxWidth()
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Name") },
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        if (nameErrorMessage.isNotEmpty()) {
+            Text(
+                text = nameErrorMessage,
+                color = Color.Red,
+            )
+        }
         TextField(
             value = email,
             onValueChange = { email = it },
             label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth(),
-            isError = !Patterns.EMAIL_ADDRESS.matcher(email).matches()
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        if (emailErrorMessage.isNotEmpty()) {
+            Text(
+                text = emailErrorMessage,
+                color = Color.Red,
+            )
+        }
         TextField(
             value = password,
             onValueChange = { password = it },
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        if (passwordErrorMessage.isNotEmpty()) {
+            Text(
+                text = passwordErrorMessage,
+                color = Color.Red,
+            )
+        }
         Button(
             onClick = {
-                signUpUser(
-                    username,
-                    email,
-                    password,
-                    navController,
-                    setErrorMessage = { errorMessage = it })
+                nameErrorMessage = if (name.isEmpty()) "Name cannot be empty" else ""
+                emailErrorMessage = if (email.isEmpty()) "Email cannot be empty" else ""
+                passwordErrorMessage = if (password.isEmpty()) "Password cannot be empty" else ""
+
+                if (name.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty()) {
+                    isLoading = true
+                    FirebaseAuth.getInstance().createUserWithEmailAndPassword(email, password)
+                        .addOnCompleteListener { task ->
+                            isLoading = false
+                            if (task.isSuccessful) {
+                                val user = task.result?.user
+                                val reward = (1..100).random().toFloat()
+                                val userData = hashMapOf(
+                                    "name" to name,
+                                    "uid" to user?.uid,
+                                    "email" to email,
+                                )
+                                FirebaseFirestore.getInstance().collection("users")
+                                    .document(user?.uid ?: "")
+                                    .set(userData)
+                                    .addOnSuccessListener {
+                                        navController.navigate("login_screen")
+                                    }
+                                    .addOnFailureListener { e ->
+                                        Toast.makeText(context, "Error saving user data: ${e.message}", Toast.LENGTH_LONG).show()
+                                    }
+                            } else {
+                                Toast.makeText(context, "Sign up failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                }
             },
-            modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Sign Up")
-        }
-        errorMessage?.let {
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.align(Alignment.Center)
-                )
+            if (isLoading) {
+                CircularProgressIndicator(color = Color.White)
+            } else {
+                Text("Sign Up")
             }
         }
     }
-}
-
-private fun signUpUser(
-    username: String,
-    email: String,
-    password: String,
-    navController: NavController,
-    setErrorMessage: (String?) -> Unit
-) {
-    val db = FirebaseFirestore.getInstance()
-    db.collection("users")
-        .whereEqualTo("email", email)
-        .get()
-        .addOnSuccessListener { documents ->
-            if (!documents.isEmpty) {
-                setErrorMessage("User already registered")
-            } else {
-                val user = hashMapOf(
-                    "username" to username,
-                    "email" to email,
-                    "password" to password
-                )
-                db.collection("users")
-                    .add(user)
-                    .addOnSuccessListener {
-                        setErrorMessage(null)
-                        navController.navigate("login_screen")
-                    }
-                    .addOnFailureListener { exception ->
-                        setErrorMessage("Error: ${exception.message}")
-                    }
-            }
-        }
-        .addOnFailureListener { exception ->
-            setErrorMessage("Error: ${exception.message}")
-        }
 }
