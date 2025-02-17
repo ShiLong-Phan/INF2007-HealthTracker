@@ -25,11 +25,13 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            val user = FirebaseAuth.getInstance().currentUser
-            val navController = rememberNavController()
+            HealthTrackerTheme {
+                val user = FirebaseAuth.getInstance().currentUser
+                val navController = rememberNavController()
 
-            NavGraph(user, navController)
+                NavGraph(user, navController)
 
+            }
         }
     }
 }
