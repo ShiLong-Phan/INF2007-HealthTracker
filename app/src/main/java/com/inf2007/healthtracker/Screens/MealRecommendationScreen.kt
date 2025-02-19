@@ -41,7 +41,7 @@ fun MealRecommendationScreen(
                         location = "Singapore",
                         term = "vegetarian",
                         categories = "",
-                        limit = 20,
+                        limit = 10,
                         apiKey = apiKey
                     )
                 }
