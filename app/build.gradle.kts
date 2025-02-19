@@ -18,6 +18,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "yelpApiKey", "\"96o7KETt8Y1dWAiAvpgWKJe0pSZEX-UN08DgEkRBLQHq7SBoRA_ODC5IMOF1XAKs_8ZQ5_SvRHJgMtsiBJAbKYeq4NAhLv29v6V_uakSS7Y_CTxTr8EJ1sipi4i0Z3Yx\"")
+        buildConfigField("String", "geminiApiKey", "\"AIzaSyA4uGSf1RJBaus-Gz9AWXcMbPBAAMIlpJk\"")
     }
 
     buildTypes {
