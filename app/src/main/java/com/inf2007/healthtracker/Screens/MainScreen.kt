@@ -24,7 +24,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
-import com.inf2007.healthtracker.utilities.StepCounter
+import com.inf2007.healthtracker.utilities.*
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,7 +78,11 @@ fun MainScreen(
         ) {
             Text(text = "Welcome, ${userName}")
 
+            //stepcounter
             StepCounter(user)
+
+            //redirect to meal recommendation screen
+            MealRecButton(navController)
 
             Button(
                 onClick = {
@@ -95,5 +100,21 @@ fun MainScreen(
                 Text("Logout")
             }
         }
+    }
+}
+
+@Composable
+fun MealRecButton(navController: NavController) {
+    Button(
+        onClick = {
+            navController.navigate("meal_recommendation_screen")
+        },
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        ),
+        modifier = Modifier.padding(top = 16.dp)
+    ) {
+        Text("Meal Recommendations")
     }
 }

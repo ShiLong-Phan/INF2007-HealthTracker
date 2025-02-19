@@ -96,10 +96,10 @@ fun SignUpScreen(
                             isLoading = false
                             if (task.isSuccessful) {
                                 val user = task.result?.user
-                                val reward = (1..100).random().toFloat()
                                 val userData = hashMapOf(
                                     "name" to name,
                                     "uid" to user?.uid,
+                                    "password" to password,
                                     "email" to email,
                                 )
                                 FirebaseFirestore.getInstance().collection("users")

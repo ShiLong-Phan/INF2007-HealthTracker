@@ -17,6 +17,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "yelpApiKey", "\"96o7KETt8Y1dWAiAvpgWKJe0pSZEX-UN08DgEkRBLQHq7SBoRA_ODC5IMOF1XAKs_8ZQ5_SvRHJgMtsiBJAbKYeq4NAhLv29v6V_uakSS7Y_CTxTr8EJ1sipi4i0Z3Yx\"")
     }
 
     buildTypes {
@@ -37,6 +38,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -64,5 +66,9 @@ dependencies {
 
     implementation(platform("com.google.firebase:firebase-bom:33.9.0"))
     implementation("com.google.firebase:firebase-analytics")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.9.0")
+    implementation("io.coil-kt:coil-compose:2.1.0")
 
 }
