@@ -11,6 +11,7 @@ import com.inf2007.healthtracker.Screens.MainScreen
 import com.inf2007.healthtracker.Screens.SignUpScreen
 import com.google.firebase.auth.FirebaseUser
 import com.inf2007.healthtracker.Screens.MealRecommendationScreen
+import com.inf2007.healthtracker.Screens.ProfileScreen
 
 @Composable
 fun NavGraph(
@@ -42,6 +43,9 @@ fun NavGraphBuilder.mainGraph(navController: NavHostController, user: FirebaseUs
         }
         composable("meal_recommendation_screen") {
             MealRecommendationScreen(navController)
+        }
+        composable("profile_screen") {
+            ProfileScreen(navController)
         }
     }
 }

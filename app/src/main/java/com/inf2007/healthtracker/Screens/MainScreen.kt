@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
@@ -64,7 +65,12 @@ fun MainScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "Health Tracker") }
+                title = { Text(text = "Health Tracker") },
+                actions = {
+                    IconButton(onClick = { navController.navigate("profile_screen") }) {
+                        Text("Profile")
+                    }
+                }
             )
         }
     ) { paddingValues ->
