@@ -14,7 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.auth.FirebaseUser
 
 @Composable
-fun StepCounter(user: FirebaseUser) {
+fun StepCounter() {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("stepCounterPrefs", Context.MODE_PRIVATE)
     var stepCount by remember { mutableStateOf(0) }

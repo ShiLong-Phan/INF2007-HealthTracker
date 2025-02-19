@@ -31,6 +31,7 @@ fun NavGraphBuilder.authGraph(navController: NavHostController) {
     navigation(startDestination = "login_screen", route = "auth_graph") {
         composable("login_screen") { LoginScreen(navController) }
         composable("signup_screen") { SignUpScreen(navController) }
+        composable("main_screen") { MainScreen(navController) }
     }
 }
 
@@ -38,7 +39,7 @@ fun NavGraphBuilder.mainGraph(navController: NavHostController, user: FirebaseUs
     navigation(startDestination = "main_screen", route = "main_graph") {
         composable("main_screen") {
             if (user != null) {
-                MainScreen(navController, user)
+                MainScreen(navController)
             }
         }
         composable("meal_recommendation_screen") {

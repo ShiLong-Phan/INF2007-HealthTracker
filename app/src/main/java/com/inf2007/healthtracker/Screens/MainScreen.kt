@@ -32,12 +32,12 @@ import com.inf2007.healthtracker.utilities.*
 @Composable
 fun MainScreen(
     navController: NavController,
-    user: FirebaseUser,
     modifier: Modifier = Modifier
 ) {
     var userName by remember { mutableStateOf<String?>("") }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
+    var user by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
 
     LaunchedEffect(Unit) {
         val currentUser = FirebaseAuth.getInstance().currentUser
@@ -85,7 +85,7 @@ fun MainScreen(
             Text(text = "Welcome, ${userName}")
 
             //stepcounter
-            StepCounter(user)
+            StepCounter()
 
             //redirect to meal recommendation screen
             MealRecButton(navController)
