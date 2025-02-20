@@ -85,7 +85,7 @@ fun MainScreen(
             Text(text = "Welcome, ${userName}")
 
             //stepcounter
-            StepCounter()
+            StepCounter(user!!)
 
             //redirect to meal recommendation screen
             MealRecButton(navController)
