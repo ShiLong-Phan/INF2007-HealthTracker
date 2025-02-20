@@ -54,20 +54,5 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSIONS_REQUEST_CODE) {
-            val deniedPermissions = permissions.filterIndexed { index, _ ->
-                grantResults[index] != PackageManager.PERMISSION_GRANTED
-            }
 
-            if (deniedPermissions.isNotEmpty()) {
-                ActivityCompat.requestPermissions(this, deniedPermissions.toTypedArray(), PERMISSIONS_REQUEST_CODE)
-            }
-        }
-    }
 }
