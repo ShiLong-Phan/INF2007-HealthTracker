@@ -37,9 +37,9 @@ fun MainScreen(
     var userName by remember { mutableStateOf<String?>("") }
     var weight by remember { mutableStateOf(70) } // Default weight
     var height by remember { mutableStateOf(170) } // Default height
-    var activityLevel by remember { mutableStateOf("Moderate") }
-    var dietaryPreference by remember { mutableStateOf("None") }
-    var calorieIntake by remember { mutableStateOf(2000) }
+    var activityLevel by remember { mutableStateOf("Moderate") } // Default activity level
+    var dietaryPreference by remember { mutableStateOf("None") } // Default dietary preference
+    var calorieIntake by remember { mutableStateOf(2000) } // Default calorie intake
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
     var user by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
@@ -51,12 +51,12 @@ fun MainScreen(
                 .get()
                 .addOnSuccessListener { document ->
                     if (document != null) {
-                        userName = document.getString("name") ?: "User"
-                        weight = document.getLong("weight")?.toInt() ?: 70
-                        height = document.getLong("height")?.toInt() ?: 170
-                        activityLevel = document.getString("activity_level") ?: "Moderate"
-                        dietaryPreference = document.getString("dietary_preference") ?: "None"
-                        calorieIntake = document.getLong("calorie_intake")?.toInt() ?: 2000
+                        userName = document.getString("name") ?: "User" // Default to "User" if null
+                        weight = document.getLong("weight")?.toInt() ?: 70 // Default to 70 if null
+                        height = document.getLong("height")?.toInt() ?: 170 // Default to 170 if null
+                        activityLevel = document.getString("activity_level") ?: "Moderate" // Default to "Moderate" if null
+                        dietaryPreference = document.getString("dietary_preference") ?: "None" // Default to "None" if null
+                        calorieIntake = document.getLong("calorie_intake")?.toInt() ?: 2000 // Default to 2000 if null
                     } else {
                         errorMessage = "No user data found"
                     }
@@ -97,7 +97,7 @@ fun MainScreen(
             // Step Counter
             StepCounter()
 
-            // ✅ Pass Retrieved User Data to Meal Recommendation Screen
+            // Pass Retrieved User Data to Meal Recommendation Screen
             MealRecButton(
                 navController = navController,
                 weight = weight,
@@ -126,7 +126,7 @@ fun MainScreen(
     }
 }
 
-// ✅ Modified MealRecButton to Pass User Profile Data
+// Modified MealRecButton to Pass User Profile Data
 @Composable
 fun MealRecButton(
     navController: NavController,
