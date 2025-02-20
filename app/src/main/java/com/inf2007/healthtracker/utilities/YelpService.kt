@@ -34,6 +34,19 @@ fun getYelpSearchTerm(meal: String?): String {
         meal.contains("granola", ignoreCase = true) -> "Health food cafe"
         meal.contains("smoothie", ignoreCase = true) -> "Smoothie bar"
         meal.contains("protein shake", ignoreCase = true) -> "Fitness cafe"
+        meal.contains("acai bowl", ignoreCase = true) -> "Superfood cafe"
+        meal.contains("scrambled eggs", ignoreCase = true) -> "Brunch cafe"
+        meal.contains("french toast", ignoreCase = true) -> "Brunch restaurant"
+        meal.contains("cereal", ignoreCase = true) -> "Organic grocery store"
+        meal.contains("energy bar", ignoreCase = true) -> "Health food store"
+        meal.contains("turmeric latte", ignoreCase = true) -> "Wellness cafe"
+        meal.contains("green smoothie", ignoreCase = true) -> "Juice bar"
+        meal.contains("cappuccino", ignoreCase = true) -> "Coffee shop"
+        meal.contains("latte", ignoreCase = true) -> "Coffee house"
+        meal.contains("croissant", ignoreCase = true) -> "French bakery"
+        meal.contains("eggs benedict", ignoreCase = true) -> "Brunch spot"
+        meal.contains("matcha latte", ignoreCase = true) -> "Japanese cafe"
+        meal.contains("vegan pancakes", ignoreCase = true) -> "Vegan brunch cafe"
 
         // ✅ Protein-Rich Meals
         meal.contains("salmon", ignoreCase = true) -> "Seafood restaurant"
@@ -47,6 +60,11 @@ fun getYelpSearchTerm(meal: String?): String {
         meal.contains("prawns", ignoreCase = true) -> "Mediterranean seafood"
         meal.contains("turkey", ignoreCase = true) -> "Deli restaurant"
         meal.contains("quinoa", ignoreCase = true) -> "Organic restaurant"
+        meal.contains("cottage cheese", ignoreCase = true) -> "Health-focused cafe"
+        meal.contains("lentils", ignoreCase = true) -> "Indian cuisine"
+        meal.contains("chickpeas", ignoreCase = true) -> "Mediterranean restaurant"
+        meal.contains("bacon", ignoreCase = true) -> "American diner"
+        meal.contains("venison", ignoreCase = true) -> "Game meat restaurant"
 
         // ✅ Vegetables & Vegetarian Options
         meal.contains("broccoli", ignoreCase = true) -> "Vegetarian restaurant"
@@ -61,6 +79,12 @@ fun getYelpSearchTerm(meal: String?): String {
         meal.contains("cauliflower", ignoreCase = true) -> "Vegan restaurant"
         meal.contains("carrots", ignoreCase = true) -> "Juice bar"
         meal.contains("brussels sprouts", ignoreCase = true) -> "Farm-to-table restaurant"
+        meal.contains("zucchini", ignoreCase = true) -> "Vegan restaurant"
+        meal.contains("artichoke", ignoreCase = true) -> "Mediterranean cuisine"
+        meal.contains("jackfruit", ignoreCase = true) -> "Vegan restaurant"
+        meal.contains("arugula", ignoreCase = true) -> "Organic salad bar"
+        meal.contains("vegan burger", ignoreCase = true) -> "Vegan fast food"
+        meal.contains("falafel", ignoreCase = true) -> "Mediterranean cuisine"
 
         // ✅ Carbohydrates & Grains
         meal.contains("brown rice", ignoreCase = true) -> "Asian cuisine"
@@ -95,6 +119,9 @@ fun getYelpSearchTerm(meal: String?): String {
         meal.contains("tamale", ignoreCase = true) -> "Mexican street food"
         meal.contains("ceviche", ignoreCase = true) -> "Peruvian restaurant"
         meal.contains("empanada", ignoreCase = true) -> "Argentinian bakery"
+        meal.contains("pho", ignoreCase = true) -> "Vietnamese noodle bar"
+        meal.contains("ramen", ignoreCase = true) -> "Japanese ramen shop"
+        meal.contains("bibimbap", ignoreCase = true) -> "Korean restaurant"
 
         // ✅ Snacks & Light Meals
         meal.contains("wrap", ignoreCase = true) -> "Healthy wraps"
@@ -116,6 +143,20 @@ fun getYelpSearchTerm(meal: String?): String {
         meal.contains("gelato", ignoreCase = true) -> "Italian gelateria"
         meal.contains("donut", ignoreCase = true) -> "Donut shop"
         meal.contains("croissant", ignoreCase = true) -> "French bakery"
+        meal.contains("pudding", ignoreCase = true) -> "British dessert cafe"
+        meal.contains("apple pie", ignoreCase = true) -> "American bakery"
+        meal.contains("mochi", ignoreCase = true) -> "Japanese dessert shop"
+        meal.contains("baklava", ignoreCase = true) -> "Middle Eastern bakery"
+
+        // ✅ Beverages
+        meal.contains("coffee", ignoreCase = true) -> "Coffee shop"
+        meal.contains("green tea", ignoreCase = true) -> "Tea house"
+        meal.contains("matcha", ignoreCase = true) -> "Japanese cafe"
+        meal.contains("bubble tea", ignoreCase = true) -> "Bubble tea shop"
+        meal.contains("kombucha", ignoreCase = true) -> "Fermented drinks bar"
+        meal.contains("herbal tea", ignoreCase = true) -> "Tea house"
+        meal.contains("protein shake", ignoreCase = true) -> "Smoothie bar"
+        meal.contains("almond milk latte", ignoreCase = true) -> "Vegan coffee shop"
 
         // ✅ Catch-All Fallbacks
         else -> "Healthy food"
