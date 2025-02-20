@@ -215,9 +215,6 @@ fun QuickWaterLogging(
     }
 }
 
-/**
- * Card to display a title and value (unchanged from original).
- */
 @Composable
 fun HealthStatCard(title: String, value: String) {
     Card(
@@ -238,9 +235,7 @@ fun HealthStatCard(title: String, value: String) {
     }
 }
 
-/**
- * Simulated AI-generated health advice function (unchanged).
- */
+//ToDo, generate AI tips
 suspend fun fetchAIHealthTips(steps: Int, calorieIntake: Int, hydration: Int, weight: Int): String {
     return "Based on your activity level and nutrition, consider increasing your water intake by 500ml " +
             "to stay optimally hydrated. Aim for 10,000 steps daily for better cardiovascular health."
