@@ -35,6 +35,11 @@ fun MainScreen(
     modifier: Modifier = Modifier
 ) {
     var userName by remember { mutableStateOf<String?>("") }
+    var weight by remember { mutableStateOf(70) } // Default weight
+    var height by remember { mutableStateOf(170) } // Default height
+    var activityLevel by remember { mutableStateOf("Moderate") }
+    var dietaryPreference by remember { mutableStateOf("None") }
+    var calorieIntake by remember { mutableStateOf(2000) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
     var user by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
@@ -45,15 +50,20 @@ fun MainScreen(
             FirebaseFirestore.getInstance().collection("users").document(currentUser.uid)
                 .get()
                 .addOnSuccessListener { document ->
-                    if (document != null && document.contains("name")) {
-                        userName = document.getString("name") ?: ""
+                    if (document != null) {
+                        userName = document.getString("name") ?: "User"
+                        weight = document.getLong("weight")?.toInt() ?: 70
+                        height = document.getLong("height")?.toInt() ?: 170
+                        activityLevel = document.getString("activity_level") ?: "Moderate"
+                        dietaryPreference = document.getString("dietary_preference") ?: "None"
+                        calorieIntake = document.getLong("calorie_intake")?.toInt() ?: 2000
                     } else {
                         errorMessage = "No user data found"
                     }
                     isLoading = false
                 }
                 .addOnFailureListener { exception ->
-                    errorMessage = exception.message ?: "Failed to retrieve reward"
+                    errorMessage = exception.message ?: "Failed to retrieve user data"
                     isLoading = false
                 }
         } else {
@@ -84,11 +94,18 @@ fun MainScreen(
         ) {
             Text(text = "Welcome, ${userName}")
 
-            //stepcounter
+            // Step Counter
             StepCounter()
 
-            //redirect to meal recommendation screen
-            MealRecButton(navController)
+            // ✅ Pass Retrieved User Data to Meal Recommendation Screen
+            MealRecButton(
+                navController = navController,
+                weight = weight,
+                height = height,
+                activityLevel = activityLevel,
+                dietaryPreference = dietaryPreference,
+                calorieIntake = calorieIntake
+            )
 
             Button(
                 onClick = {
@@ -109,11 +126,21 @@ fun MainScreen(
     }
 }
 
+// ✅ Modified MealRecButton to Pass User Profile Data
 @Composable
-fun MealRecButton(navController: NavController) {
+fun MealRecButton(
+    navController: NavController,
+    weight: Int,
+    height: Int,
+    activityLevel: String,
+    dietaryPreference: String,
+    calorieIntake: Int
+) {
     Button(
         onClick = {
-            navController.navigate("meal_recommendation_screen")
+            navController.navigate(
+                "meal_recommendation_screen/$weight/$height/$activityLevel/$dietaryPreference/$calorieIntake"
+            )
         },
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,

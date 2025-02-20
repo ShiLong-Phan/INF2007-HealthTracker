@@ -25,6 +25,7 @@ fun ProfileScreen(
     var height by remember { mutableStateOf("") }
     var activityLevel by remember { mutableStateOf("") }
     var dietaryPreference by remember { mutableStateOf("") }
+    var calorieIntake by remember { mutableStateOf("") }
     var isEditing by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
@@ -43,6 +44,7 @@ fun ProfileScreen(
                     height = document.get("height")?.toString() ?: ""
                     activityLevel = document.getString("activity_level") ?: "Sedentary"
                     dietaryPreference = document.getString("dietary_preference") ?: "None"
+                    calorieIntake = document.get("calorie_intake")?.toString() ?: ""
                     isLoading = false
                 }
                 .addOnFailureListener { exception ->
@@ -77,6 +79,7 @@ fun ProfileScreen(
                         Text("Height: $height cm", style = MaterialTheme.typography.bodyLarge)
                         Text("Activity Level: $activityLevel", style = MaterialTheme.typography.bodyLarge)
                         Text("Dietary Preference: $dietaryPreference", style = MaterialTheme.typography.bodyLarge)
+                        Text("Calorie Intake: $calorieIntake kcal", style = MaterialTheme.typography.bodyLarge)
 
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -146,6 +149,13 @@ fun ProfileScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        TextField(
+                            value = calorieIntake,
+                            onValueChange = { calorieIntake = it },
+                            label = { Text("Desired Calorie Intake (kcal)") }
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         Button(
                             onClick = {
                                 isLoading = true
@@ -160,6 +170,7 @@ fun ProfileScreen(
                                 // Ensure weight and height are stored as Integers only if valid
                                 weight.toIntOrNull()?.let { updates["weight"] = it }
                                 height.toIntOrNull()?.let { updates["height"] = it }
+                                calorieIntake.toIntOrNull()?.let { updates["calorie_intake"] = it }
 
                                 FirebaseFirestore.getInstance().collection("users")
                                     .document(user!!.uid)

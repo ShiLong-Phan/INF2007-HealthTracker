@@ -42,8 +42,26 @@ fun NavGraphBuilder.mainGraph(navController: NavHostController, user: FirebaseUs
                 MainScreen(navController)
             }
         }
-        composable("meal_recommendation_screen") {
-            MealRecommendationScreen(navController)
+        composable(
+            route = "meal_recommendation_screen/{weight}/{height}/{activityLevel}/{dietaryPreference}/{calorieIntake}",
+        ) { backStackEntry ->
+
+            // Extract values from arguments
+            val weight = backStackEntry.arguments?.getString("weight")?.toIntOrNull() ?: 70
+            val height = backStackEntry.arguments?.getString("height")?.toIntOrNull() ?: 170
+            val activityLevel = backStackEntry.arguments?.getString("activityLevel") ?: "Moderate"
+            val dietaryPreference = backStackEntry.arguments?.getString("dietaryPreference") ?: "None"
+            val calorieIntake = backStackEntry.arguments?.getString("calorieIntake")?.toIntOrNull() ?: 2000
+
+            // Pass extracted values to the screen
+            MealRecommendationScreen(
+                navController = navController,
+                weight = weight,
+                height = height,
+                activityLevel = activityLevel,
+                dietaryPreference = dietaryPreference,
+                calorieIntake = calorieIntake
+            )
         }
         composable("profile_screen") {
             ProfileScreen(navController)
