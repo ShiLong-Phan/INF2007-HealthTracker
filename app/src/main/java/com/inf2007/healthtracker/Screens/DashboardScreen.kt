@@ -1,0 +1,247 @@
+package com.inf2007.healthtracker.Screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.launch
+import kotlin.math.min
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DashboardScreen(
+    navController: NavController,
+    modifier: Modifier = Modifier
+) {
+    var steps by remember { mutableStateOf(0) }
+    var calorieIntake by remember { mutableStateOf(0) }
+    var hydration by remember { mutableStateOf(0) }
+    var weight by remember { mutableStateOf(0) }
+    var healthTips by remember { mutableStateOf("Fetching AI health tips...") }
+
+    // Example data for new functionalities (like weekly steps)
+    var weeklySteps by remember { mutableStateOf(listOf(1000, 1000, 1000, 1000, 1000, 1000, 1000)) }
+    val dailyStepGoal = 10000
+    val dailyCalorieGoal = 2000
+    val dailyHydrationGoal = 3200
+
+    val coroutineScope = rememberCoroutineScope()
+
+    // Fetch user data from Firestore
+    LaunchedEffect(Unit) {
+        val user = FirebaseAuth.getInstance().currentUser
+        user?.let {
+            FirebaseFirestore.getInstance().collection("users").document(it.uid)
+                .get()
+                .addOnSuccessListener { document ->
+                    steps = document.getLong("steps")?.toInt() ?: 0
+                    calorieIntake = document.getLong("calorie_intake")?.toInt() ?: 0
+                    hydration = document.getLong("hydration")?.toInt() ?: 0
+                    weight = document.getLong("weight")?.toInt() ?: 0
+                }
+        }
+    }
+
+    // Fetch AI health tips
+    LaunchedEffect(Unit) {
+        coroutineScope.launch {
+            healthTips = fetchAIHealthTips(steps, calorieIntake, hydration, weight)
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("Dashboard", textAlign = TextAlign.Center) })
+        }
+    ) { paddingValues ->
+        // Wrap the content Column with .verticalScroll(...)
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())  // Makes the screen scrollable
+                .padding(paddingValues)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                "Your Daily Summary",
+                style = MaterialTheme.typography.headlineMedium,
+                textAlign = TextAlign.Center
+            )
+            Divider()
+
+            HealthStatCard("Steps Taken", "$steps")
+            HealthStatCard("Calorie Intake", "$calorieIntake kcal")
+            HealthStatCard("Water Intake", "$hydration ml")
+            HealthStatCard("Current Weight", "$weight kg")
+
+            // Daily Goals vs. Actual
+            DailyGoalProgress("Steps", steps, dailyStepGoal, "steps")
+            DailyGoalProgress("Calories", calorieIntake, dailyCalorieGoal, "kcal")
+            DailyGoalProgress("Hydration", hydration, dailyHydrationGoal, "ml")
+
+            Divider()
+
+            // Simple Weekly Steps Chart
+            Text(
+                text = "Weekly Steps",
+                style = MaterialTheme.typography.titleLarge,
+                textAlign = TextAlign.Center
+            )
+            WeeklyStepsChart(weeklySteps)
+
+            // Quick water intake logging
+            QuickWaterLogging(
+                onLogWater = { amount ->
+                    coroutineScope.launch {
+                        val user = FirebaseAuth.getInstance().currentUser ?: return@launch
+                        hydration += amount
+                        FirebaseFirestore.getInstance().collection("users")
+                            .document(user.uid)
+                            .update("hydration", hydration)
+                    }
+                },
+                onResetWater = {
+                    coroutineScope.launch {
+                        val user = FirebaseAuth.getInstance().currentUser ?: return@launch
+                        hydration = 0
+                        FirebaseFirestore.getInstance().collection("users")
+                            .document(user.uid)
+                            .update("hydration", hydration)
+                    }
+                }
+            )
+
+            Divider()
+
+            Text("AI Health Tips", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            ) {
+                Text(
+                    text = healthTips,
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Shows daily goal progress for a stat (e.g., steps, calories, or hydration).
+ */
+@Composable
+fun DailyGoalProgress(statLabel: String, currentValue: Int, goalValue: Int, unit: String) {
+    val progressFraction = min(currentValue.toFloat() / goalValue, 1f)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("$statLabel: $currentValue / $goalValue $unit", style = MaterialTheme.typography.bodyLarge)
+        LinearProgressIndicator(
+            progress = progressFraction,
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .padding(top = 4.dp)
+        )
+    }
+}
+
+/**
+ * A very basic placeholder 'chart' for weekly steps.
+ * Replace this with a real chart library if you want a more detailed graph.
+ */
+@Composable
+fun WeeklyStepsChart(weeklyData: List<Int>) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        weeklyData.forEach { daySteps ->
+            val fraction = min(daySteps / 10000f, 1f)
+            Box(
+                modifier = Modifier
+                    .width(20.dp)
+                    .height((100 * fraction).dp)
+                    .background(MaterialTheme.colorScheme.primary)
+            )
+        }
+    }
+}
+
+/**
+ * Buttons for quick water intake logging: +250 ml, +500 ml, +1000 ml, and now Reset.
+ */
+@Composable
+fun QuickWaterLogging(
+    onLogWater: (Int) -> Unit,
+    onResetWater: () -> Unit
+) {
+    Text(
+        text = "Log Water Intake",
+        style = MaterialTheme.typography.titleMedium,
+        textAlign = TextAlign.Center
+    )
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Button(onClick = { onLogWater(250) }) {
+            Text("+250 ml")
+        }
+        Button(onClick = { onLogWater(500) }) {
+            Text("+500 ml")
+        }
+        Button(onClick = { onLogWater(1000) }) {
+            Text("+1000 ml")
+        }
+
+    }
+
+    Button(onClick = { onResetWater() }) {
+        Text("Reset Water for testing purposes")
+    }
+}
+
+/**
+ * Card to display a title and value (unchanged from original).
+ */
+@Composable
+fun HealthStatCard(title: String, value: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = value, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+/**
+ * Simulated AI-generated health advice function (unchanged).
+ */
+suspend fun fetchAIHealthTips(steps: Int, calorieIntake: Int, hydration: Int, weight: Int): String {
+    return "Based on your activity level and nutrition, consider increasing your water intake by 500ml " +
+            "to stay optimally hydrated. Aim for 10,000 steps daily for better cardiovascular health."
+}
