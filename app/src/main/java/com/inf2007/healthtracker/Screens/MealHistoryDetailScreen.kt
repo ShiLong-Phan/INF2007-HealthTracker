@@ -43,12 +43,10 @@ fun MealHistoryDetailScreen(
                     val meals = doc.get("meals") as? List<String> ?: emptyList()
 
                     val restaurantsRaw = doc.get("restaurants") as? List<Map<String, Any>> ?: emptyList()
-                    println("🔥 Retrieved Restaurants: $restaurantsRaw") // ✅ Debugging
 
                     val restaurants = restaurantsRaw.mapNotNull { map ->
                         val name = map["name"] as? String ?: return@mapNotNull null
                         val imageUrl = map["imageUrl"] as? String ?: return@mapNotNull null // Ensure valid URL
-                        println("✅ Parsed Restaurant: $name - $imageUrl") // ✅ Debugging
                         Restaurant(name = name, imageUrl = imageUrl)
                     }
 
