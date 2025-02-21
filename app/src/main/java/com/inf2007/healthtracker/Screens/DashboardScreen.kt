@@ -23,7 +23,7 @@ import java.util.*
 @Composable
 fun DashboardScreen(
     navController: NavController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var steps by remember { mutableStateOf(0) }
 
@@ -55,19 +55,27 @@ fun DashboardScreen(
     // Fetch user data from Firestore
     LaunchedEffect(Unit) {
         currentUser?.let { user ->
-            // We no longer set `calorieIntake` from the user doc here.
-            // We only retrieve steps, hydration, and weight.
+            // Fetch hydration, weight, and desiredCalorieIntake from `users`:
             FirebaseFirestore.getInstance().collection("users")
                 .document(user.uid)
                 .get()
                 .addOnSuccessListener { document ->
-                    steps = document.getLong("steps")?.toInt() ?: 0
                     hydration = document.getLong("hydration")?.toInt() ?: 0
                     weight = document.getLong("weight")?.toInt() ?: 0
                     desiredCalorieIntake = document.getLong("calorie_intake")?.toInt() ?: 0
                 }
 
-            // Listen for changes to the `foodEntries` collection where userId == user.uid
+            // Fetch steps from the `steps` collection:
+            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            val stepsDocId = "${user.uid}_$dateStr"
+            FirebaseFirestore.getInstance().collection("steps")
+                .document(stepsDocId)
+                .get()
+                .addOnSuccessListener { doc ->
+                    steps = doc.getLong("steps")?.toInt() ?: 0
+                }
+
+            // Listen for changes to the `foodEntries` collection:
             FirebaseFirestore.getInstance().collection("foodEntries")
                 .whereEqualTo("userId", user.uid)
                 .addSnapshotListener { snapshot, error ->
@@ -77,7 +85,6 @@ fun DashboardScreen(
                             doc.toObject(FoodEntry::class.java)?.copy(id = doc.id)
                         }
                         foodEntries = items
-                        // 2) Calculate total user calorie intake from sum of `caloricValue`
                         calorieIntake = items.sumOf { it.caloricValue }
                     } else {
                         foodEntries = emptyList()
