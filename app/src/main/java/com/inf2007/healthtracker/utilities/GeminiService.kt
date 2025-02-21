@@ -22,6 +22,7 @@ class GeminiService(private val apiKey: String) {
         age: Int,
         weight: Int,
         height: Int,
+        gender: String,
         activityLevel: String,
         dietaryPreference: String,
         calorieIntake: Int
@@ -32,6 +33,7 @@ class GeminiService(private val apiKey: String) {
                 - Age: $age
                 - Weight: $weight kg
                 - Height: $height cm
+                - Gender: $gender
                 - Activity Level: $activityLevel
                 - Dietary Preference: $dietaryPreference
                 - Calorie Intake Goal: $calorieIntake kcal

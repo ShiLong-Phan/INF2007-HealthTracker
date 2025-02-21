@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -115,9 +116,15 @@ fun MealHistoryDetailScreen(
 
                     // Meal List Section
                     Text("Meals:", style = MaterialTheme.typography.titleMedium)
-                    LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                        items(history.meals) { meal ->
-                            Text("- $meal", style = MaterialTheme.typography.bodyMedium)
+
+                    // Add SelectionContainer directly around the LazyColumn's meals list
+                    Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                        SelectionContainer {
+                            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                                items(history.meals) { meal ->
+                                    Text("- $meal", style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
                         }
                     }
 
@@ -131,14 +138,7 @@ fun MealHistoryDetailScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
 
-                    Button(
-                        onClick = { navController.popBackStack() },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Back to Meal History")
-                    }
                 }
             }
         }

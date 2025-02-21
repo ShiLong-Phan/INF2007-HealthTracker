@@ -56,7 +56,7 @@ fun MealRecommendationScreen(
         coroutineScope.launch {
             try {
                 // ✅ Generate Meal Plan Using AI
-                aiMealPlan = geminiService.generateMealPlan(age, weight, height, activityLevel, dietaryPreference, calorieIntake)
+                aiMealPlan = geminiService.generateMealPlan(age, weight, height, gender, activityLevel, dietaryPreference, calorieIntake)
 
                 // ✅ Convert AI-generated meal to a Yelp-friendly search term
                 val searchTerm = getYelpSearchTerm(aiMealPlan.firstOrNull())
