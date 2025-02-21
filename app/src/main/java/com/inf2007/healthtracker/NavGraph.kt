@@ -10,6 +10,7 @@ import com.inf2007.healthtracker.Screens.LoginScreen
 import com.inf2007.healthtracker.Screens.MainScreen
 import com.inf2007.healthtracker.Screens.SignUpScreen
 import com.google.firebase.auth.FirebaseUser
+import com.inf2007.healthtracker.Screens.CaptureFoodScreen
 import com.inf2007.healthtracker.Screens.DashboardScreen
 import com.inf2007.healthtracker.Screens.MealRecommendationScreen
 import com.inf2007.healthtracker.Screens.ProfileScreen
@@ -74,6 +75,10 @@ fun NavGraphBuilder.mainGraph(navController: NavHostController, user: FirebaseUs
 
         composable("dashboard_screen"){
             DashboardScreen(navController)
+        }
+
+        composable("capture_food_screen"){
+            CaptureFoodScreen(navController)
         }
     }
 }

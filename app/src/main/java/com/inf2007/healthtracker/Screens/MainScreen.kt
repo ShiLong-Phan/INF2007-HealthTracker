@@ -260,7 +260,7 @@ fun MainScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text("Welcome, $userName", style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
-            Divider()
+            HorizontalDivider()
 
             StepCounter()
 
@@ -271,7 +271,7 @@ fun MainScreen(
             ) {
 
                 // Pass Retrieved User Data to Meal Recommendation Screen
-                MealRecButton(
+                MealRecBtn(
                     navController = navController,
                     age = age,
                     gender = gender,
@@ -281,7 +281,8 @@ fun MainScreen(
                     dietaryPreference = dietaryPreference,
                     calorieIntake = calorieIntake
                 )
-                DashboardBut(navController = navController)
+                DashboardBtn(navController = navController)
+                CaptureFoodBtn(navController = navController)
 
                 ActionButton("Logout") {
                     FirebaseAuth.getInstance().signOut()
@@ -296,7 +297,7 @@ fun MainScreen(
 
 // Modified MealRecButton to Pass User Profile Data
 @Composable
-fun MealRecButton(
+fun MealRecBtn(
     navController: NavController,
     age: String,
     gender: String,
@@ -325,7 +326,7 @@ fun MealRecButton(
 }
 
 @Composable
-fun DashboardBut(navController: NavController) {
+fun DashboardBtn(navController: NavController) {
     Button(
         onClick = {
             navController.navigate(
@@ -339,6 +340,24 @@ fun DashboardBut(navController: NavController) {
         modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
     ) {
         Text("Dashboard")
+    }
+}
+
+@Composable
+fun CaptureFoodBtn(navController: NavController) {
+    Button(
+        onClick = {
+            navController.navigate(
+                "capture_food_screen"
+            )
+        },
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        ),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
+    ) {
+        Text("Save Food Data")
     }
 }
 
