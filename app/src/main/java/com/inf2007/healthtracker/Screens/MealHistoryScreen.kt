@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.inf2007.healthtracker.utilities.MealHistory
+import com.inf2007.healthtracker.utilities.Restaurant
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -34,6 +36,8 @@ fun MealHistoryScreen(
     var mealHistory by remember { mutableStateOf<List<MealHistory>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
+    // Track the item pending deletion confirmation.
+    var pendingDeleteItem by remember { mutableStateOf<MealHistory?>(null) }
 
     val user = FirebaseAuth.getInstance().currentUser
     val firestore = FirebaseFirestore.getInstance()
@@ -46,7 +50,8 @@ fun MealHistoryScreen(
                 .get()
                 .addOnSuccessListener { historySnapshot ->
                     mealHistory = historySnapshot.documents.mapNotNull { doc ->
-                        doc.toObject(MealHistory::class.java)
+                        // Map Firestore document into MealHistory and capture the document ID.
+                        doc.toObject(MealHistory::class.java)?.copy(documentId = doc.id)
                     }
                 }
                 .addOnFailureListener { exception ->
@@ -76,18 +81,19 @@ fun MealHistoryScreen(
                 ) {
                     items(
                         items = mealHistory,
-                        key = { history -> history.uid + history.date.time } // Provide a unique key
+                        key = { history -> history.documentId } // Use documentId as the unique key.
                     ) { history ->
-                        val dismissState = rememberDismissState(confirmStateChange = { dismissValue ->
-                            if (dismissValue == DismissValue.DismissedToStart) {
-                                // Optionally: Remove from Firestore here
-                                // firestore.collection("mealHistory").document(history.documentId).delete()
-
-                                // Remove from local state:
-                                mealHistory = mealHistory.filter { it != history }
+                        // Each item has its own dismiss state.
+                        val dismissState = rememberDismissState(
+                            confirmStateChange = { dismissValue ->
+                                if (dismissValue == DismissValue.DismissedToStart) {
+                                    // Instead of immediately deleting, store the item pending confirmation.
+                                    pendingDeleteItem = history
+                                }
+                                // Return false to prevent auto-dismiss.
+                                false
                             }
-                            true
-                        })
+                        )
                         SwipeToDismiss(
                             state = dismissState,
                             directions = setOf(DismissDirection.EndToStart),
@@ -117,6 +123,39 @@ fun MealHistoryScreen(
                         )
                     }
                 }
+            }
+
+            // Display a confirmation dialog if an item is pending deletion.
+            pendingDeleteItem?.let { item ->
+                AlertDialog(
+                    onDismissRequest = { pendingDeleteItem = null },
+                    title = { Text("Delete Meal History") },
+                    text = { Text("Are you sure you want to delete this meal history?") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                firestore.collection("mealHistory")
+                                    .document(item.documentId)
+                                    .delete()
+                                    .addOnSuccessListener {
+                                        // Remove from local state on successful deletion.
+                                        mealHistory = mealHistory.filter { it.documentId != item.documentId }
+                                    }
+                                    .addOnFailureListener { exception ->
+                                        errorMessage = "Deletion failed: ${exception.message}"
+                                    }
+                                pendingDeleteItem = null
+                            }
+                        ) {
+                            Text("Delete")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { pendingDeleteItem = null }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
             }
         }
     }
@@ -154,3 +193,4 @@ fun MealHistoryItem(navController: NavController, history: MealHistory) {
         }
     }
 }
+

@@ -16,6 +16,8 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.firestore.FirebaseFirestore
+import com.inf2007.healthtracker.utilities.MealHistory
+import com.inf2007.healthtracker.utilities.Restaurant
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -158,16 +160,3 @@ fun RestaurantItem(restaurant: Restaurant) {
     }
 }
 
-// Firestore Data Model for Meal History
-data class MealHistory(
-    val uid: String = "",
-    val date: Date = Date(),
-    val meals: List<String> = emptyList(),
-    val restaurants: List<Restaurant> = emptyList() // ✅ Now a list of objects
-)
-
-// Firestore Data Model for Restaurants
-data class Restaurant(
-    val name: String = "",
-    val imageUrl: String = "" // ✅ Ensure we store image URLs
-)
