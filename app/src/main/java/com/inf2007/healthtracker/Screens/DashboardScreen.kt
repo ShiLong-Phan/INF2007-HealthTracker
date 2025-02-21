@@ -11,10 +11,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlin.math.min
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,30 +26,63 @@ fun DashboardScreen(
     modifier: Modifier = Modifier
 ) {
     var steps by remember { mutableStateOf(0) }
+
+    /**
+     * Now we derive `calorieIntake` from the sum of all food entries,
+     * so we'll remove the line setting `calorieIntake` from `users` doc.
+     */
     var calorieIntake by remember { mutableStateOf(0) }
+    var desiredCalorieIntake by remember { mutableStateOf(0) }
+
     var hydration by remember { mutableStateOf(0) }
     var weight by remember { mutableStateOf(0) }
     var healthTips by remember { mutableStateOf("Fetching AI health tips...") }
 
     // Example data for new functionalities (like weekly steps)
     var weeklySteps by remember { mutableStateOf(listOf(1000, 1000, 1000, 1000, 1000, 1000, 1000)) }
+
+    // 1) Change daily calorie goal to 1746
     val dailyStepGoal = 10000
-    val dailyCalorieGoal = 2000
+    val dailyCalorieGoal = desiredCalorieIntake
     val dailyHydrationGoal = 3200
 
+    // List of food entries for the current user
+    var foodEntries by remember { mutableStateOf<List<FoodEntry>>(emptyList()) }
+
     val coroutineScope = rememberCoroutineScope()
+    val currentUser = FirebaseAuth.getInstance().currentUser
 
     // Fetch user data from Firestore
     LaunchedEffect(Unit) {
-        val user = FirebaseAuth.getInstance().currentUser
-        user?.let {
-            FirebaseFirestore.getInstance().collection("users").document(it.uid)
+        currentUser?.let { user ->
+            // We no longer set `calorieIntake` from the user doc here.
+            // We only retrieve steps, hydration, and weight.
+            FirebaseFirestore.getInstance().collection("users")
+                .document(user.uid)
                 .get()
                 .addOnSuccessListener { document ->
                     steps = document.getLong("steps")?.toInt() ?: 0
-                    calorieIntake = document.getLong("calorie_intake")?.toInt() ?: 0
                     hydration = document.getLong("hydration")?.toInt() ?: 0
                     weight = document.getLong("weight")?.toInt() ?: 0
+                    desiredCalorieIntake = document.getLong("calorie_intake")?.toInt() ?: 0
+                }
+
+            // Listen for changes to the `foodEntries` collection where userId == user.uid
+            FirebaseFirestore.getInstance().collection("foodEntries")
+                .whereEqualTo("userId", user.uid)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) return@addSnapshotListener
+                    if (snapshot != null && !snapshot.isEmpty) {
+                        val items = snapshot.documents.mapNotNull { doc ->
+                            doc.toObject(FoodEntry::class.java)?.copy(id = doc.id)
+                        }
+                        foodEntries = items
+                        // 2) Calculate total user calorie intake from sum of `caloricValue`
+                        calorieIntake = items.sumOf { it.caloricValue }
+                    } else {
+                        foodEntries = emptyList()
+                        calorieIntake = 0
+                    }
                 }
         }
     }
@@ -63,11 +99,11 @@ fun DashboardScreen(
             TopAppBar(title = { Text("Dashboard", textAlign = TextAlign.Center) })
         }
     ) { paddingValues ->
-        // Wrap the content Column with .verticalScroll(...)
+        // Make content scrollable
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())  // Makes the screen scrollable
+                .verticalScroll(rememberScrollState())
                 .padding(paddingValues)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -81,6 +117,7 @@ fun DashboardScreen(
             Divider()
 
             HealthStatCard("Steps Taken", "$steps")
+            // 3) Show total calorie intake from food entries
             HealthStatCard("Calorie Intake", "$calorieIntake kcal")
             HealthStatCard("Water Intake", "$hydration ml")
             HealthStatCard("Current Weight", "$weight kg")
@@ -100,24 +137,42 @@ fun DashboardScreen(
             )
             WeeklyStepsChart(weeklySteps)
 
+            Divider()
+
+            // Food Eaten Section
+            Text("Food Eaten", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+            if (foodEntries.isEmpty()) {
+                Text("No entries yet!", style = MaterialTheme.typography.bodyLarge)
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    foodEntries.forEach { entry ->
+                        FoodEntryCard(entry)
+                    }
+                }
+            }
+
+            Divider()
+
             // Quick water intake logging
             QuickWaterLogging(
                 onLogWater = { amount ->
                     coroutineScope.launch {
-                        val user = FirebaseAuth.getInstance().currentUser ?: return@launch
-                        hydration += amount
-                        FirebaseFirestore.getInstance().collection("users")
-                            .document(user.uid)
-                            .update("hydration", hydration)
+                        currentUser?.let { user ->
+                            hydration += amount
+                            FirebaseFirestore.getInstance().collection("users")
+                                .document(user.uid)
+                                .update("hydration", hydration)
+                        }
                     }
                 },
                 onResetWater = {
                     coroutineScope.launch {
-                        val user = FirebaseAuth.getInstance().currentUser ?: return@launch
-                        hydration = 0
-                        FirebaseFirestore.getInstance().collection("users")
-                            .document(user.uid)
-                            .update("hydration", hydration)
+                        currentUser?.let { user ->
+                            hydration = 0
+                            FirebaseFirestore.getInstance().collection("users")
+                                .document(user.uid)
+                                .update("hydration", hydration)
+                        }
                     }
                 }
             )
@@ -136,6 +191,40 @@ fun DashboardScreen(
                     textAlign = TextAlign.Center
                 )
             }
+        }
+    }
+}
+
+/**
+ * Data class for a food entry document in Firestore.
+ */
+data class FoodEntry(
+    val id: String = "",
+    val foodName: String = "",
+    val caloricValue: Int = 0,
+    val timestamp: Timestamp? = null,
+    val userId: String = ""
+)
+
+/**
+ * Composable to display a single FoodEntry.
+ */
+@Composable
+fun FoodEntryCard(entry: FoodEntry) {
+    val sdf = SimpleDateFormat("MMM d, yyyy hh:mm a", Locale.getDefault())
+    val dateString = entry.timestamp?.toDate()?.let { sdf.format(it) } ?: "No date"
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(text = entry.foodName, style = MaterialTheme.typography.titleMedium)
+            Text(text = "Calories: ${entry.caloricValue}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "Date: $dateString", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -182,7 +271,7 @@ fun WeeklyStepsChart(weeklyData: List<Int>) {
 }
 
 /**
- * Buttons for quick water intake logging: +250 ml, +500 ml, +1000 ml, and now Reset.
+ * Buttons for quick water intake logging: +250 ml, +500 ml, +1000 ml, and Reset.
  */
 @Composable
 fun QuickWaterLogging(
@@ -190,7 +279,7 @@ fun QuickWaterLogging(
     onResetWater: () -> Unit
 ) {
     Text(
-        text = "Log Water Intake",
+        text = "Log Extra Water",
         style = MaterialTheme.typography.titleMedium,
         textAlign = TextAlign.Center
     )
@@ -209,12 +298,14 @@ fun QuickWaterLogging(
         }
 
     }
-
-    Button(onClick = { onResetWater() }) {
-        Text("Reset Water for testing purposes")
+    Button(onClick = onResetWater) {
+        Text("Reset for testing purposes")
     }
 }
 
+/**
+ * Card to display a title and value (unchanged from original).
+ */
 @Composable
 fun HealthStatCard(title: String, value: String) {
     Card(
@@ -235,7 +326,9 @@ fun HealthStatCard(title: String, value: String) {
     }
 }
 
-//ToDo, generate AI tips
+/**
+ * Simulated AI-generated health advice function (unchanged).
+ */
 suspend fun fetchAIHealthTips(steps: Int, calorieIntake: Int, hydration: Int, weight: Int): String {
     return "Based on your activity level and nutrition, consider increasing your water intake by 500ml " +
             "to stay optimally hydrated. Aim for 10,000 steps daily for better cardiovascular health."
