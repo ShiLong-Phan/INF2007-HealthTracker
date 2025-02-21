@@ -12,5 +12,9 @@ data class MealHistory(
 
 data class Restaurant(
     val name: String = "",
-    val imageUrl: String = ""
+    val imageUrl: String = "",
+    val address: String = "",
+    val phone: String = "",
+    val rating: Double = 0.0,
+    val price: String = ""
 )

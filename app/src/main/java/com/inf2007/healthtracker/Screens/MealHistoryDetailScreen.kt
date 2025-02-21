@@ -1,11 +1,13 @@
 package com.inf2007.healthtracker.Screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -49,7 +51,12 @@ fun MealHistoryDetailScreen(
                     val restaurants = restaurantsRaw.mapNotNull { map ->
                         val name = map["name"] as? String ?: return@mapNotNull null
                         val imageUrl = map["imageUrl"] as? String ?: return@mapNotNull null // Ensure valid URL
-                        Restaurant(name = name, imageUrl = imageUrl)
+                        val address = map["address"] as? String ?: "Not Available"
+                        val rating = map["rating"] as? Double ?: 0.0
+                        val phone = map["phone"] as? String ?: "Not Available"
+                        val price = map["price"] as? String ?: "Not Available"
+
+                        Restaurant(name = name, imageUrl = imageUrl, address = address, rating = rating, price = price, phone = phone)
                     }
 
                     mealHistory = MealHistory(
@@ -62,11 +69,10 @@ fun MealHistoryDetailScreen(
             }
             .addOnFailureListener { exception ->
                 errorMessage = "Error: ${exception.message}"
-                println("❌ Firestore Error: ${exception.message}")
+                println("Firestore Error: ${exception.message}")
             }
             .addOnCompleteListener { isLoading = false }
     }
-
 
     Scaffold(
         topBar = {
@@ -139,24 +145,56 @@ fun MealHistoryDetailScreen(
     }
 }
 
+
 @Composable
 fun RestaurantItem(restaurant: Restaurant) {
-    Row(
+    var expanded by remember { mutableStateOf(false) } // Track expanded state
+
+    val expandedContent = @Composable {
+        Column(modifier = Modifier.padding(8.dp)) {
+            Text(text = "Address: ${restaurant.address ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "Phone: ${restaurant.phone?.takeIf { it.isNotBlank() } ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "Rating: ${if(restaurant.rating == 0.0) "Not Available" else "${restaurant.rating} / 5"}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "Price: ${restaurant.price?.takeIf { it.isNotBlank() } ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(8.dp)
+            .clickable { expanded = !expanded }, // Toggle expanded state when clicked
+        horizontalAlignment = Alignment.Start
     ) {
-        AsyncImage(
-            model = restaurant.imageUrl,
-            contentDescription = restaurant.name,
-            modifier = Modifier
-                .size(80.dp)
-                .padding(4.dp),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text = restaurant.name, style = MaterialTheme.typography.bodyLarge)
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AsyncImage(
+                model = restaurant.imageUrl,
+                contentDescription = restaurant.name,
+                modifier = Modifier
+                    .size(80.dp)
+                    .padding(4.dp),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = restaurant.name,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                imageVector = if (expanded) Icons.Default.ArrowDropDown else Icons.Default.ArrowDropDown,
+                contentDescription = if (expanded) "Collapse" else "Expand"
+            )
+        }
+
+        // Show more details if expanded
+        if (expanded) {
+            expandedContent()
+        }
     }
 }
+
 

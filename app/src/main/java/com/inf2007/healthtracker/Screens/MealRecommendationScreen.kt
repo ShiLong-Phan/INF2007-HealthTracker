@@ -1,9 +1,12 @@
 package com.inf2007.healthtracker.Screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -18,6 +22,7 @@ import com.google.gson.Gson
 import com.inf2007.healthtracker.utilities.*
 import com.inf2007.healthtracker.BuildConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
@@ -38,7 +43,9 @@ fun MealRecommendationScreen(
     var restaurantRecommendations by remember { mutableStateOf<List<Business>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
+    var showSuccessMessage by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     val user = FirebaseAuth.getInstance().currentUser
     val firestore = FirebaseFirestore.getInstance()
 
@@ -82,11 +89,21 @@ fun MealRecommendationScreen(
         }
     }
 
+    LaunchedEffect(showSuccessMessage) {
+        if (showSuccessMessage) {
+            delay(500) // Wait for 0.5 seconds
+            navController.navigate("main_screen") {
+                popUpTo("main_screen") { inclusive = true }
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("AI-Powered Meal Plan") }
-            )
+            Column {
+                TopAppBar(title = { Text("AI-Powered Meal Plan") })
+                SnackbarHost(hostState = snackbarHostState)
+            }
         }
     ) { paddingValues ->
         if (isLoading) {
@@ -98,74 +115,116 @@ fun MealRecommendationScreen(
                 Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
             }
         } else {
-            LazyColumn(modifier = Modifier.padding(paddingValues).padding(16.dp)) {
-                items(aiMealPlan) { meal ->
-                    Column(modifier = Modifier.padding(8.dp)) {
-                        Text(text = meal, style = MaterialTheme.typography.bodyLarge)
-                        Spacer(modifier = Modifier.height(8.dp))
+            Column(modifier = Modifier.padding(paddingValues).padding(16.dp)) {
+                // Meal Plan Section
+                Text("Meal Plan:", style = MaterialTheme.typography.titleMedium)
+                LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                    items(aiMealPlan) { meal ->
+                        Text("- $meal", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
 
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Nearby Restaurants", style = MaterialTheme.typography.titleLarge)
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
+                Spacer(modifier = Modifier.height(16.dp))
 
-                items(restaurantRecommendations) { business ->
-                    Column(modifier = Modifier.padding(8.dp)) {
-                        val painter = rememberAsyncImagePainter(business.image_url)
-                        Image(
-                            painter = painter,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = business.name, style = MaterialTheme.typography.titleLarge)
-                        Text(
-                            text = "Rating: ${business.rating}",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Text(
-                            text = business.location.address1,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
+                // Restaurant List Section
+                Text("Nearby Restaurants:", style = MaterialTheme.typography.titleMedium)
+                LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                    items(restaurantRecommendations) { business ->
+                        RestaurantItem(business)
                     }
                 }
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = {
-                            user?.let {
-                                val mealHistoryData = hashMapOf(
-                                    "uid" to it.uid,
-                                    "date" to Date(),
-                                    "meals" to aiMealPlan,
-                                    "restaurants" to restaurantRecommendations.map { business ->
-                                        mapOf(
-                                            "name" to business.name,
-                                            "imageUrl" to business.image_url // 🔥 Store image URL
-                                        )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = {
+                        user?.let {
+                            val mealHistoryData = hashMapOf(
+                                "uid" to it.uid,
+                                "date" to Date(),
+                                "meals" to aiMealPlan,
+                                "restaurants" to restaurantRecommendations.map { business ->
+                                    mapOf(
+                                        "name" to business.name,
+                                        "imageUrl" to business.image_url, //  Store image URL
+                                        "address" to business.location.address1, // Add address
+                                        "rating" to business.rating, // Add rating
+                                        "phone" to business.phone, // Add phone number
+                                        "price" to business.price // Add price
+                                    )
+                                }
+                            )
+                            firestore.collection("mealHistory")
+                                .add(mealHistoryData)
+                                .addOnSuccessListener {
+                                    showSuccessMessage = true
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("Meal history saved successfully!")
                                     }
-                                )
-                                firestore.collection("mealHistory")
-                                    .add(mealHistoryData)
-                                    .addOnSuccessListener { errorMessage = "Meal history saved successfully!" }
-                                    .addOnFailureListener { e -> errorMessage = "Failed to save meal history: ${e.message}" }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Save Meal History")
-                    }
-
+                                }
+                                .addOnFailureListener { e ->
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("Failed to save meal history: ${e.message}")
+                                    }
+                                }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Save Meal History")
                 }
-
             }
         }
     }
 }
+
+@Composable
+fun RestaurantItem(business: Business) {
+    var expanded by remember { mutableStateOf(false) } // Track expanded state
+    val expandedContent = @Composable {
+        Column(modifier = Modifier.padding(8.dp)) {
+            Text(text = "Address: ${business.location.address1 ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "Phone: ${business.phone?.takeIf { it.isNotBlank() } ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "Rating: ${if (business.rating == 0.0) "Not Available" else "${business.rating} / 5"}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "Price: ${business.price?.takeIf { it.isNotBlank() } ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+            .clickable { expanded = !expanded }, // Toggle expanded state when clicked
+        horizontalAlignment = Alignment.Start
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AsyncImage(
+                model = business.image_url,
+                contentDescription = business.name,
+                modifier = Modifier
+                    .size(80.dp)
+                    .padding(4.dp),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = business.name,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                imageVector = if (expanded) Icons.Default.ArrowDropDown else Icons.Default.ArrowDropDown,
+                contentDescription = if (expanded) "Collapse" else "Expand"
+            )
+        }
+
+        // Show more details if expanded
+        if (expanded) {
+            expandedContent()
+        }
+    }
+}
+
