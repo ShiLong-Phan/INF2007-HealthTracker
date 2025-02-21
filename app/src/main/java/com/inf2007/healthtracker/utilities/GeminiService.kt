@@ -7,7 +7,7 @@ import com.google.ai.client.generativeai.type.TextPart
 class GeminiService(private val apiKey: String) {
 
     private val generativeModel = GenerativeModel(
-        modelName = "gemini-1.5-flash",
+        modelName = "gemini-2.0-flash-exp",
         apiKey = apiKey
     )
 
@@ -22,6 +22,7 @@ class GeminiService(private val apiKey: String) {
         return try {
             val prompt = """
                 Generate a meal plan for a user with:
+                - Age: $age
                 - Weight: $weight kg
                 - Height: $height cm
                 - Activity Level: $activityLevel
