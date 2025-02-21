@@ -12,12 +12,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
 import com.inf2007.healthtracker.utilities.*
 import com.inf2007.healthtracker.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +39,8 @@ fun MealRecommendationScreen(
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
+    val user = FirebaseAuth.getInstance().currentUser
+    val firestore = FirebaseFirestore.getInstance()
 
     // ✅ Use Gemini AI SDK
     val geminiService = remember { GeminiService(BuildConfig.geminiApiKey) }
@@ -131,6 +136,35 @@ fun MealRecommendationScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            user?.let {
+                                val mealHistoryData = hashMapOf(
+                                    "uid" to it.uid,
+                                    "date" to Date(),
+                                    "meals" to aiMealPlan,
+                                    "restaurants" to restaurantRecommendations.map { business ->
+                                        mapOf(
+                                            "name" to business.name,
+                                            "imageUrl" to business.image_url // 🔥 Store image URL
+                                        )
+                                    }
+                                )
+                                firestore.collection("mealHistory")
+                                    .add(mealHistoryData)
+                                    .addOnSuccessListener { errorMessage = "Meal history saved successfully!" }
+                                    .addOnFailureListener { e -> errorMessage = "Failed to save meal history: ${e.message}" }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Save Meal History")
+                    }
+
+                }
+
             }
         }
     }
