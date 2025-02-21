@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,11 +34,11 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun StepCounter(user: FirebaseUser) {
+fun StepCounter(user: FirebaseUser, onStepCountUpdated: (Int) -> Unit) {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("stepCounterPrefs", Context.MODE_PRIVATE)
     var stepCount by remember { mutableStateOf(0) }
-    var lastSyncedSteps by remember { mutableStateOf(0) } // Last steps saved in Firestore
+    var lastSyncedSteps by remember { mutableStateOf(0) }
     var initialStepCount by remember { mutableStateOf(sharedPreferences.getInt("initialStepCount", -1)) }
 
     val firestore = FirebaseFirestore.getInstance()
@@ -48,7 +49,8 @@ fun StepCounter(user: FirebaseUser) {
         stepsRef.get().addOnSuccessListener { document ->
             if (document.exists()) {
                 lastSyncedSteps = document.getLong("steps")?.toInt() ?: 0
-                stepCount = lastSyncedSteps // Set UI step count from Firestore
+                stepCount = lastSyncedSteps
+                onStepCountUpdated(stepCount) // Update step count in MainScreen
             }
         }.addOnFailureListener { exception ->
             Log.e("StepCounter", "Failed to retrieve steps: ${exception.message}")
@@ -74,7 +76,8 @@ fun StepCounter(user: FirebaseUser) {
                             }
                         }
                         val newStepCount = event.values[0].toInt() - initialStepCount
-                        stepCount = lastSyncedSteps + newStepCount // Add to Firestore count
+                        stepCount = lastSyncedSteps + newStepCount
+                        onStepCountUpdated(stepCount) // Update step count in MainScreen
                         Log.d("StepCounter", "Step count: $stepCount")
                     }
                 }
@@ -93,16 +96,9 @@ fun StepCounter(user: FirebaseUser) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Text(text = "Steps: $stepCount")
-
-        Button(
-            onClick = { syncStepsToFirestore(user, stepCount.toLong(), stepsRef) },
-            modifier = Modifier.padding(top = 16.dp)
-        ) {
-            Text("Sync Now")
-        }
+        Text(text = "Steps: $stepCount", style = MaterialTheme.typography.headlineMedium)
     }
 }
 
