@@ -12,6 +12,7 @@ class GeminiService(private val apiKey: String) {
     )
 
     suspend fun generateMealPlan(
+        age: Int,
         weight: Int,
         height: Int,
         activityLevel: String,

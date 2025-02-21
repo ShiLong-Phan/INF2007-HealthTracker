@@ -180,6 +180,7 @@
 
 package com.inf2007.healthtracker.Screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -191,7 +192,6 @@ import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.inf2007.healthtracker.utilities.StepCounter
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -200,7 +200,9 @@ fun MainScreen(
     modifier: Modifier = Modifier
 ) {
     var userName by remember { mutableStateOf<String?>("") }
-    var weight by remember { mutableStateOf(70) }
+    var age by remember { mutableStateOf("") }
+    var gender by remember { mutableStateOf("") }
+    var weight by remember { mutableStateOf(68) }
     var height by remember { mutableStateOf(170) }
     var activityLevel by remember { mutableStateOf("Moderate") }
     var dietaryPreference by remember { mutableStateOf("None") }
@@ -216,6 +218,8 @@ fun MainScreen(
                 .get()
                 .addOnSuccessListener { document ->
                     userName = document.getString("name") ?: "User"
+                    age = (document.getString("age") ?: 23).toString()
+                    gender = document.getString("gender") ?: "Male"
                     weight = document.getLong("weight")?.toInt() ?: 70
                     height = document.getLong("height")?.toInt() ?: 170
                     activityLevel = document.getString("activity_level") ?: "Moderate"
@@ -236,9 +240,13 @@ fun MainScreen(
             TopAppBar(
                 title = { Text(text = "Health Tracker") },
                 actions = {
-                    IconButton(onClick = { navController.navigate("profile_screen") }) {
-                        Text("Profile")
-                    }
+                    Text(
+                        text = "Profile",
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .clickable { navController.navigate("profile_screen") },
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
             )
         }
@@ -265,6 +273,8 @@ fun MainScreen(
                 // Pass Retrieved User Data to Meal Recommendation Screen
                 MealRecButton(
                     navController = navController,
+                    age = age,
+                    gender = gender,
                     weight = weight,
                     height = height,
                     activityLevel = activityLevel,
@@ -288,6 +298,8 @@ fun MainScreen(
 @Composable
 fun MealRecButton(
     navController: NavController,
+    age: String,
+    gender: String,
     weight: Int,
     height: Int,
     activityLevel: String,
@@ -297,7 +309,7 @@ fun MealRecButton(
     Button(
         onClick = {
             navController.navigate(
-                "meal_recommendation_screen/$weight/$height/$activityLevel/$dietaryPreference/$calorieIntake"
+                "meal_recommendation_screen/$age/$gender/$weight/$height/$activityLevel/$dietaryPreference/$calorieIntake"
             )
         },
         colors = ButtonDefaults.buttonColors(

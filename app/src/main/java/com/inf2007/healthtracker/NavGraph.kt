@@ -44,10 +44,12 @@ fun NavGraphBuilder.mainGraph(navController: NavHostController, user: FirebaseUs
             }
         }
         composable(
-            route = "meal_recommendation_screen/{weight}/{height}/{activityLevel}/{dietaryPreference}/{calorieIntake}",
+            route = "meal_recommendation_screen/{age}/{gender}/{weight}/{height}/{activityLevel}/{dietaryPreference}/{calorieIntake}",
         ) { backStackEntry ->
 
             // Extract values from arguments
+            val age = backStackEntry.arguments?.getString("age")?.toIntOrNull() ?: 23
+            val gender = backStackEntry.arguments?.getString("gender") ?: "Male"
             val weight = backStackEntry.arguments?.getString("weight")?.toIntOrNull() ?: 70
             val height = backStackEntry.arguments?.getString("height")?.toIntOrNull() ?: 170
             val activityLevel = backStackEntry.arguments?.getString("activityLevel") ?: "Moderate"
@@ -57,6 +59,8 @@ fun NavGraphBuilder.mainGraph(navController: NavHostController, user: FirebaseUs
             // Pass extracted values to the screen
             MealRecommendationScreen(
                 navController = navController,
+                age = age,
+                gender = gender,
                 weight = weight,
                 height = height,
                 activityLevel = activityLevel,

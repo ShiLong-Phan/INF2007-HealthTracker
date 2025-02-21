@@ -19,9 +19,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MealRecommendationScreen(
     navController: NavController,
+    age: Int,
+    gender: String,
     weight: Int,
     height: Int,
     activityLevel: String,
@@ -41,7 +44,7 @@ fun MealRecommendationScreen(
         coroutineScope.launch {
             try {
                 // ✅ Generate Meal Plan Using AI
-                aiMealPlan = geminiService.generateMealPlan(weight, height, activityLevel, dietaryPreference, calorieIntake)
+                aiMealPlan = geminiService.generateMealPlan(age, weight, height, activityLevel, dietaryPreference, calorieIntake)
 
                 // ✅ Convert AI-generated meal to a Yelp-friendly search term
                 val searchTerm = getYelpSearchTerm(aiMealPlan.firstOrNull())
@@ -74,56 +77,59 @@ fun MealRecommendationScreen(
         }
     }
 
-    if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("AI-Powered Meal Plan") }
+            )
         }
-    } else if (errorMessage.isNotEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
-        }
-    } else {
-        LazyColumn(modifier = Modifier.padding(16.dp)) {
-            item {
-                Text("AI-Powered Meal Plan", style = MaterialTheme.typography.titleLarge)
-                Spacer(modifier = Modifier.height(8.dp))
+    ) { paddingValues ->
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
+        } else if (errorMessage.isNotEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
+            }
+        } else {
+            LazyColumn(modifier = Modifier.padding(paddingValues).padding(16.dp)) {
+                items(aiMealPlan) { meal ->
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Text(text = meal, style = MaterialTheme.typography.bodyLarge)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
 
-            items(aiMealPlan) { meal ->
-                Column(modifier = Modifier.padding(8.dp)) {
-                    Text(text = meal, style = MaterialTheme.typography.bodyLarge)
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Nearby Restaurants", style = MaterialTheme.typography.titleLarge)
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-            }
 
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Nearby Restaurants", style = MaterialTheme.typography.titleLarge)
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            items(restaurantRecommendations) { business ->
-                Column(modifier = Modifier.padding(8.dp)) {
-                    val painter = rememberAsyncImagePainter(business.image_url)
-                    Image(
-                        painter = painter,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                        contentScale = ContentScale.Crop
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = business.name, style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        text = "Rating: ${business.rating}",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        text = business.location.address1,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                items(restaurantRecommendations) { business ->
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        val painter = rememberAsyncImagePainter(business.image_url)
+                        Image(
+                            painter = painter,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(text = business.name, style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            text = "Rating: ${business.rating}",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            text = business.location.address1,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                 }
             }
         }
