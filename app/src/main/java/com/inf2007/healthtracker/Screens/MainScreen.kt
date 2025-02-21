@@ -190,8 +190,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.inf2007.healthtracker.utilities.StepCounter
+import com.inf2007.healthtracker.utilities.getCurrentDate
+import com.inf2007.healthtracker.utilities.syncStepsToFirestore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -209,7 +213,12 @@ fun MainScreen(
     var calorieIntake by remember { mutableStateOf(2000) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
-    val coroutineScope = rememberCoroutineScope()
+    //val coroutineScope = rememberCoroutineScope()
+    var user by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
+    var stepCount by remember { mutableStateOf(0) } // Step count from StepCounter
+    val firestore = FirebaseFirestore.getInstance()
+    val stepsRef = firestore.collection("steps").document("${user?.uid}_${getCurrentDate()}")
+
 
     LaunchedEffect(Unit) {
         val currentUser = FirebaseAuth.getInstance().currentUser
@@ -262,13 +271,18 @@ fun MainScreen(
             Text("Welcome, $userName", style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
             HorizontalDivider()
 
-            StepCounter()
+            StepCounter(user!!) { newStepCount ->
+                stepCount = newStepCount
+            }
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+
+                // New Sync Button
+                SyncNowBtn(user!!, stepCount, stepsRef)
 
                 // Pass Retrieved User Data to Meal Recommendation Screen
                 MealRecBtn(
@@ -323,6 +337,21 @@ fun MealRecBtn(
     }
 
 
+}
+
+// New Sync Button (Styled like other buttons)
+@Composable
+fun SyncNowBtn(user: FirebaseUser, stepCount: Int, stepsRef: DocumentReference) {
+    Button(
+        onClick = { syncStepsToFirestore(user, stepCount.toLong(), stepsRef) },
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        ),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
+    ) {
+        Text("Sync Now")
+    }
 }
 
 @Composable
