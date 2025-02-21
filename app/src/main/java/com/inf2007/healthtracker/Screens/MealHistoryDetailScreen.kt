@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -13,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -34,6 +36,8 @@ fun MealHistoryDetailScreen(
     var mealHistory by remember { mutableStateOf<MealHistory?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
+    var updatedMeals by remember { mutableStateOf(mutableListOf<String>()) }
+    var mealInputState by remember { mutableStateOf(mutableMapOf<String, String>()) } // State to track each meal input separately
 
     val firestore = FirebaseFirestore.getInstance()
 
@@ -64,8 +68,11 @@ fun MealHistoryDetailScreen(
                         uid = uid,
                         date = doc.getDate("date") ?: Date(),
                         meals = meals,
-                        restaurants = restaurants
+                        restaurants = restaurants,
+                        documentId = doc.id // Save the document ID here
                     )
+                    updatedMeals = meals.toMutableList() // Initialize with the fetched meals
+                    mealInputState = meals.associateWith { it }.toMutableMap() // Initialize input state
                 }
             }
             .addOnFailureListener { exception ->
@@ -114,19 +121,48 @@ fun MealHistoryDetailScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Meal List Section
-                    Text("Meals:", style = MaterialTheme.typography.titleMedium)
+                    // Editable Meal List Section
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween // This aligns the items in the row with space between them
+                    ) {
+                        // Text "Meals:" and button in the same row
+                        Text("Meals:", style = MaterialTheme.typography.titleMedium)
 
-                    // Add SelectionContainer directly around the LazyColumn's meals list
+                        // Save button placed on the far-right side of the row
+                        Button(
+                            onClick = { saveMeals(mealInputState, history) },
+                            modifier = Modifier
+                                .size(80.dp, 30.dp) // Smaller button size
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .offset(y = (-3).dp), // Adjust vertical offset to move text higher
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Save", style = MaterialTheme.typography.bodySmall.copy(color = Color.White))
+                            }
+                        }
+
+                    }
+
+                    // Editable Meal List
                     Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                        SelectionContainer {
-                            LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                                items(history.meals) { meal ->
-                                    Text("- $meal", style = MaterialTheme.typography.bodyMedium)
-                                }
+                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                            items(updatedMeals) { meal ->
+                                EditableMealItem(
+                                    meal = meal,
+                                    mealInputState = mealInputState,
+                                    onMealChange = { updatedMeal ->
+                                        mealInputState[meal] = updatedMeal // Update only the changed meal
+                                    }
+                                )
                             }
                         }
                     }
+
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -137,14 +173,55 @@ fun MealHistoryDetailScreen(
                             RestaurantItem(restaurant)
                         }
                     }
-
-
                 }
             }
         }
     }
 }
 
+// Editable meal item
+@Composable
+fun EditableMealItem(
+    meal: String,
+    mealInputState: MutableMap<String, String>,
+    onMealChange: (String) -> Unit
+) {
+    var mealText by remember { mutableStateOf(mealInputState[meal] ?: meal) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        BasicTextField(
+            value = mealText,
+            onValueChange = {
+                mealText = it
+                onMealChange(it) // Call onChange with the new value
+            },
+            modifier = Modifier.weight(1f),
+            textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.Black)
+        )
+    }
+}
+
+// Save the updated meal list to Firestore
+fun saveMeals(mealInputState: Map<String, String>, history: MealHistory) {
+    val updatedMealData = hashMapOf(
+        "meals" to mealInputState.values.toList() // Updated meals list
+    ) as Map<String, Any> // Cast to Map<String, Any> to match Firestore update requirements
+
+    FirebaseFirestore.getInstance().collection("mealHistory")
+        .document(history.documentId) // Assuming the documentId is available
+        .update(updatedMealData)
+        .addOnSuccessListener {
+            // Show confirmation
+            println("Meals updated successfully!")
+        }
+        .addOnFailureListener { e ->
+            // Handle error
+            println("Failed to update meals: ${e.message}")
+        }
+}
 
 @Composable
 fun RestaurantItem(restaurant: Restaurant) {
@@ -196,5 +273,3 @@ fun RestaurantItem(restaurant: Restaurant) {
         }
     }
 }
-
-
