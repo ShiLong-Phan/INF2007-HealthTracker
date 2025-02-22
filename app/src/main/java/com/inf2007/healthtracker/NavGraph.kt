@@ -12,6 +12,8 @@ import com.inf2007.healthtracker.Screens.SignUpScreen
 import com.google.firebase.auth.FirebaseUser
 import com.inf2007.healthtracker.Screens.CaptureFoodScreen
 import com.inf2007.healthtracker.Screens.DashboardScreen
+import com.inf2007.healthtracker.Screens.MealHistoryDetailScreen
+import com.inf2007.healthtracker.Screens.MealHistoryScreen
 import com.inf2007.healthtracker.Screens.MealRecommendationScreen
 import com.inf2007.healthtracker.Screens.ProfileScreen
 
@@ -79,6 +81,17 @@ fun NavGraphBuilder.mainGraph(navController: NavHostController, user: FirebaseUs
 
         composable("capture_food_screen"){
             CaptureFoodScreen(navController)
+        }
+
+        composable("meal_history_screen") {
+            MealHistoryScreen(navController)
+        }
+
+        composable("meal_history_detail/{uid}/{timestamp}") { backStackEntry ->
+            val uid = backStackEntry.arguments?.getString("uid") ?: ""
+            val timestamp = backStackEntry.arguments?.getString("timestamp")?.toLongOrNull() ?: 0L
+
+            MealHistoryDetailScreen(navController, uid, timestamp)
         }
     }
 }

@@ -295,6 +295,7 @@ fun MainScreen(
                     dietaryPreference = dietaryPreference,
                     calorieIntake = calorieIntake
                 )
+                ViewMealHistoryBtn(navController)
                 DashboardBtn(navController = navController)
                 CaptureFoodBtn(navController = navController)
 
@@ -403,3 +404,20 @@ fun ActionButton(text: String, onClick: () -> Unit) {
         Text(text, textAlign = TextAlign.Center)
     }
 }
+
+@Composable
+fun ViewMealHistoryBtn(navController: NavController) {
+    Button(
+        onClick = {
+            navController.navigate("meal_history_screen")
+        },
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        ),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
+    ) {
+        Text("View Meal History")
+    }
+}
+

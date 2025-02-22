@@ -8,7 +8,9 @@ data class Business(
     val name: String,
     val rating: Double,
     val location: Location,
-    val image_url: String
+    val image_url: String,
+    val phone: String,
+    val price: String
 )
 
 data class Location(
