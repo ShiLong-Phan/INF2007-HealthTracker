@@ -7,7 +7,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import com.inf2007.healthtracker.Screens.LoginScreen
-import com.inf2007.healthtracker.Screens.MainScreen
 import com.inf2007.healthtracker.Screens.SignUpScreen
 import com.google.firebase.auth.FirebaseUser
 import com.inf2007.healthtracker.Screens.CaptureFoodScreen
