@@ -26,6 +26,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextDecoration
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -180,6 +186,7 @@ fun MealRecommendationScreen(
 
 @Composable
 fun RestaurantItem(business: Business) {
+    val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) } // Track expanded state
     val expandedContent = @Composable {
         Column(modifier = Modifier.padding(8.dp)) {
@@ -187,6 +194,17 @@ fun RestaurantItem(business: Business) {
             Text(text = "Phone: ${business.phone?.takeIf { it.isNotBlank() } ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
             Text(text = "Rating: ${if (business.rating == 0.0) "Not Available" else "${business.rating} / 5"}", style = MaterialTheme.typography.bodyMedium)
             Text(text = "Price: ${business.price?.takeIf { it.isNotBlank() } ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = "Click Here to Open in Google Maps",
+                style = MaterialTheme.typography.bodyMedium.copy(color = Color.Blue),
+                textDecoration = TextDecoration.Underline,
+                modifier = Modifier.clickable {
+                    val gmmIntentUri = Uri.parse("geo:0,0?q=${Uri.encode(business.name)}")
+                    val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                    mapIntent.setPackage("com.google.android.apps.maps")
+                    context.startActivity(mapIntent)
+                }
+            )
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
