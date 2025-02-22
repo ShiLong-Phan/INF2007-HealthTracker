@@ -42,7 +42,9 @@ fun StepCounter(user: FirebaseUser, onStepCountUpdated: (Int) -> Unit) {
     var initialStepCount by remember { mutableStateOf(sharedPreferences.getInt("initialStepCount", -1)) }
 
     val firestore = FirebaseFirestore.getInstance()
-    val stepsRef = firestore.collection("steps").document("${user.uid}_${getCurrentDate()}")
+    val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    val formattedDate = dateFormat.format(Date())
+    val stepsRef = firestore.collection("steps").document("${user?.uid}_${formattedDate}")
 
     // Fetch last recorded steps from Firestore on launch
     LaunchedEffect(user) {
