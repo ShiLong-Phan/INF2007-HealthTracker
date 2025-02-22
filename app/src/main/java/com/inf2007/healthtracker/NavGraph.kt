@@ -16,6 +16,7 @@ import com.inf2007.healthtracker.Screens.MealPlanHistoryDetailScreen
 import com.inf2007.healthtracker.Screens.MealPlanHistoryScreen
 import com.inf2007.healthtracker.Screens.MealRecommendationScreen
 import com.inf2007.healthtracker.Screens.ProfileScreen
+import com.inf2007.healthtracker.Screens.HistoryScreen
 
 @Composable
 fun NavGraph(
@@ -77,6 +78,10 @@ fun NavGraphBuilder.mainGraph(navController: NavHostController, user: FirebaseUs
 
         composable("dashboard_screen"){
             DashboardScreen(navController)
+        }
+
+        composable("history_screen"){
+            HistoryScreen(navController)
         }
 
         composable("capture_food_screen"){

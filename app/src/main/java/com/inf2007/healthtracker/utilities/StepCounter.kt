@@ -105,7 +105,8 @@ fun StepCounter(user: FirebaseUser, onStepCountUpdated: (Int) -> Unit) {
 // Sync Steps to Firestore, updating only today's record
 fun syncStepsToFirestore(user: FirebaseUser, stepCount: Long, stepsRef: DocumentReference) {
     val timestamp = Date()
-
+    val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+    val todayString = dateFormat.format(Date())
     stepsRef.get().addOnSuccessListener { document ->
         if (document.exists()) {
             stepsRef.update("steps", stepCount, "timestamp", timestamp)
@@ -113,7 +114,8 @@ fun syncStepsToFirestore(user: FirebaseUser, stepCount: Long, stepsRef: Document
             val stepData = hashMapOf(
                 "steps" to stepCount,
                 "timestamp" to timestamp,
-                "userId" to user.uid
+                "userId" to user.uid,
+                "dateString" to todayString
             )
             stepsRef.set(stepData)
         }
