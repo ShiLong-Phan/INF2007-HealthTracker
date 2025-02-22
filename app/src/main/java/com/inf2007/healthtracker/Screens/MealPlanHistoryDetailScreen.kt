@@ -1,5 +1,7 @@
 package com.inf2007.healthtracker.Screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,6 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -222,6 +226,7 @@ fun saveMeals(mealInputState: Map<String, String>, history: MealHistory) {
 
 @Composable
 fun RestaurantItem(restaurant: Restaurant) {
+    var context = LocalContext.current
     var expanded by remember { mutableStateOf(false) } // Track expanded state
 
     val expandedContent = @Composable {
@@ -230,6 +235,17 @@ fun RestaurantItem(restaurant: Restaurant) {
             Text(text = "Phone: ${restaurant.phone?.takeIf { it.isNotBlank() } ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
             Text(text = "Rating: ${if(restaurant.rating == 0.0) "Not Available" else "${restaurant.rating} / 5"}", style = MaterialTheme.typography.bodyMedium)
             Text(text = "Price: ${restaurant.price?.takeIf { it.isNotBlank() } ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = "Click Here to Open in Google Maps",
+                style = MaterialTheme.typography.bodyMedium.copy(color = Color.Blue),
+                textDecoration = TextDecoration.Underline,
+                modifier = Modifier.clickable {
+                    val gmmIntentUri = Uri.parse("geo:0,0?q=${Uri.encode(restaurant.name)}")
+                    val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                    mapIntent.setPackage("com.google.android.apps.maps")
+                    context.startActivity(mapIntent)
+                }
+            )
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
@@ -249,7 +265,8 @@ fun RestaurantItem(restaurant: Restaurant) {
                 contentDescription = restaurant.name,
                 modifier = Modifier
                     .size(80.dp)
-                    .padding(4.dp),
+                    .padding(4.dp)
+                ,
                 contentScale = ContentScale.Crop
             )
             Spacer(modifier = Modifier.width(8.dp))
