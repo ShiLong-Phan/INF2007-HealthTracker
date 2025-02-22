@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.inf2007.healthtracker.utilities.BottomNavigationBar
 import com.inf2007.healthtracker.utilities.MealHistory
 import java.text.SimpleDateFormat
 import java.util.*
@@ -59,9 +60,15 @@ fun MealPlanHistoryScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Meal History") }) }
+        topBar = {
+            TopAppBar(title = { Text("Meal History") })
+        },
+        bottomBar = { BottomNavigationBar(navController) }
+
     ) { paddingValues ->
-        Column(modifier = modifier.fillMaxSize().padding(paddingValues)) {
+        Column(modifier = modifier
+            .fillMaxSize()
+            .padding(paddingValues)) {
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -136,7 +143,8 @@ fun MealPlanHistoryScreen(
                                     .delete()
                                     .addOnSuccessListener {
                                         // Remove from local state on successful deletion.
-                                        mealHistory = mealHistory.filter { it.documentId != item.documentId }
+                                        mealHistory =
+                                            mealHistory.filter { it.documentId != item.documentId }
                                     }
                                     .addOnFailureListener { exception ->
                                         errorMessage = "Deletion failed: ${exception.message}"
@@ -175,7 +183,12 @@ fun MealHistoryItem(navController: NavController, history: MealHistory) {
         ) {
             Column {
                 Text(
-                    text = "Date: ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(history.date)}",
+                    text = "Date: ${
+                        SimpleDateFormat(
+                            "yyyy-MM-dd HH:mm",
+                            Locale.getDefault()
+                        ).format(history.date)
+                    }",
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
