@@ -30,6 +30,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.inf2007.healthtracker.utilities.BottomNavigationBar
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -47,6 +48,7 @@ fun HistoryScreen(
         topBar = {
             TopAppBar(title = { Text("History") })
         },
+        bottomBar = { BottomNavigationBar(navController) },
         containerColor = MaterialTheme.colorScheme.background,
         content = { paddingValues ->
             if (currentUser == null) {
@@ -100,7 +102,10 @@ fun HistoryScreen(
                                 try {
                                     doc.toObject(StepsEntry::class.java)?.copy(id = doc.id)
                                 } catch (e: Exception) {
-                                    Log.e("HistoryScreen", "Error parsing steps entry: ${e.message}")
+                                    Log.e(
+                                        "HistoryScreen",
+                                        "Error parsing steps entry: ${e.message}"
+                                    )
                                     null
                                 }
                             }

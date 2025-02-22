@@ -5,9 +5,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.BottomNavigation
+import androidx.compose.material.BottomNavigationItem
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,6 +22,8 @@ import androidx.navigation.NavController
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.inf2007.healthtracker.utilities.BottomNavigationBar
+import com.inf2007.healthtracker.utilities.StepCounter
 import kotlinx.coroutines.launch
 import kotlin.math.min
 import java.text.SimpleDateFormat
@@ -46,6 +53,15 @@ fun DashboardScreen(
 
     val coroutineScope = rememberCoroutineScope()
     val currentUser = FirebaseAuth.getInstance().currentUser
+
+    //moving of stepcounter stuff
+    var user by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
+    var stepCount by remember { mutableStateOf(0) } // Step count from StepCounter
+    val firestore = FirebaseFirestore.getInstance()
+    val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    val formattedDate = dateFormat.format(Date())
+    val stepsRef = firestore.collection("steps").document("${user?.uid}_${formattedDate}")
+
 
     // Fetch user data from Firestore
     LaunchedEffect(Unit) {
@@ -137,7 +153,7 @@ fun DashboardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Dashboard", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                title = { Text("Dashboard", modifier = Modifier.fillMaxWidth()) },
                 actions = {
                     IconButton(onClick = { navController.navigate("history_screen") }) {
                         Icon(
@@ -147,6 +163,9 @@ fun DashboardScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            BottomNavigationBar(navController)
         }
     ) { paddingValues ->
         // Make content scrollable
@@ -164,9 +183,12 @@ fun DashboardScreen(
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center
             )
-            Divider()
+            HorizontalDivider()
 
-            HealthStatCard("Steps Taken", "$steps")
+            //HealthStatCard("Steps Taken", "$steps")
+            StepCounter(user!!) { newStepCount ->
+                stepCount = newStepCount
+            }
             HealthStatCard("Calorie Intake", "$calorieIntake kcal")
             HealthStatCard("Water Intake", "$hydration ml")
             HealthStatCard("Current Weight", "$weight kg")
@@ -175,7 +197,10 @@ fun DashboardScreen(
             DailyGoalProgress("Calories", calorieIntake, dailyCalorieGoal, "kcal")
             DailyGoalProgress("Hydration", hydration, dailyHydrationGoal, "ml")
 
-            Divider()
+            // Add SyncNowBtn here
+            SyncNowBtn(user!!, stepCount, stepsRef)
+
+            HorizontalDivider()
 
             Text(
                 text = "Weekly Steps",
@@ -184,7 +209,7 @@ fun DashboardScreen(
             )
             WeeklyStepsChart(weeklySteps)
 
-            Divider()
+            HorizontalDivider()
 
             Text("Food Eaten", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
             if (foodEntries.isEmpty()) {
@@ -197,7 +222,10 @@ fun DashboardScreen(
                 }
             }
 
-            Divider()
+            // Move CaptureFoodBtn here
+            CaptureFoodBtn(navController = navController)
+
+            HorizontalDivider()
 
             QuickWaterLogging(
                 onLogWater = { amount ->
@@ -222,7 +250,7 @@ fun DashboardScreen(
                 }
             )
 
-            Divider()
+            HorizontalDivider()
 
             Text("AI Health Tips", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
             Card(
@@ -236,6 +264,8 @@ fun DashboardScreen(
                     textAlign = TextAlign.Center
                 )
             }
+
+
         }
     }
 }
@@ -288,10 +318,10 @@ fun DailyGoalProgress(statLabel: String, currentValue: Int, goalValue: Int, unit
     ) {
         Text("$statLabel: $currentValue / $goalValue $unit", style = MaterialTheme.typography.bodyLarge)
         LinearProgressIndicator(
-            progress = progressFraction,
+            progress = { progressFraction },
             modifier = Modifier
                 .fillMaxWidth(0.8f)
-                .padding(top = 4.dp)
+                .padding(top = 4.dp),
         )
     }
 }

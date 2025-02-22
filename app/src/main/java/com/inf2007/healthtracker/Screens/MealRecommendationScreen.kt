@@ -28,6 +28,7 @@ import kotlinx.coroutines.withContext
 import java.util.*
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -38,14 +39,15 @@ import androidx.compose.ui.text.style.TextDecoration
 @Composable
 fun MealRecommendationScreen(
     navController: NavController,
-    age: Int,
-    gender: String,
-    weight: Int,
-    height: Int,
-    activityLevel: String,
-    dietaryPreference: String,
-    calorieIntake: Int
+    userId: String
 ) {
+    var age by remember { mutableStateOf(0) }
+    var gender by remember { mutableStateOf("") }
+    var weight by remember { mutableStateOf(0) }
+    var height by remember { mutableStateOf(0) }
+    var activityLevel by remember { mutableStateOf("") }
+    var dietaryPreference by remember { mutableStateOf("") }
+    var calorieIntake by remember { mutableStateOf(0) }
     var aiMealPlan by remember { mutableStateOf<List<String>>(emptyList()) }
     var restaurantRecommendations by remember { mutableStateOf<List<Business>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -53,8 +55,8 @@ fun MealRecommendationScreen(
     var showSuccessMessage by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val user = FirebaseAuth.getInstance().currentUser
     val firestore = FirebaseFirestore.getInstance()
+
 
     // ✅ Use Gemini AI SDK
     val geminiService = remember { GeminiService(BuildConfig.geminiApiKey) }
@@ -64,7 +66,15 @@ fun MealRecommendationScreen(
         coroutineScope.launch {
             try {
                 // ✅ Generate Meal Plan Using AI
-                aiMealPlan = geminiService.generateMealPlan(age, weight, height, gender, activityLevel, dietaryPreference, calorieIntake)
+                aiMealPlan = geminiService.generateMealPlan(
+                    age,
+                    weight,
+                    height,
+                    gender,
+                    activityLevel,
+                    dietaryPreference,
+                    calorieIntake
+                )
 
                 // ✅ Convert AI-generated meal to a Yelp-friendly search term
                 val searchTerm = getYelpSearchTerm(aiMealPlan.firstOrNull())
@@ -83,7 +93,8 @@ fun MealRecommendationScreen(
                     }
 
                     if (yelpResponse != null) {
-                        val parsedYelpResponse = Gson().fromJson(yelpResponse, YelpResponse::class.java)
+                        val parsedYelpResponse =
+                            Gson().fromJson(yelpResponse, YelpResponse::class.java)
                         restaurantRecommendations = parsedYelpResponse.businesses
                     } else {
                         errorMessage = "Failed to get restaurant recommendations"
@@ -98,37 +109,61 @@ fun MealRecommendationScreen(
     }
 
     // Run the fetch function once when the screen is first loaded
-    LaunchedEffect(Unit) {
-        fetchMealAndRestaurants()
-    }
-
-
-    LaunchedEffect(showSuccessMessage) {
-        if (showSuccessMessage) {
-            delay(500) // Wait for 0.5 seconds
-            navController.navigate("main_screen") {
-                popUpTo("main_screen") { inclusive = true }
+    LaunchedEffect(userId) {
+        firestore.collection("users").document(userId)
+            .get()
+            .addOnSuccessListener { document ->
+                age = (document.getString("age")?.toInt() ?: 23)
+                gender = document.getString("gender") ?: "Male"
+                weight = document.getLong("weight")?.toInt() ?: 70
+                height = document.getLong("height")?.toInt() ?: 170
+                activityLevel = document.getString("activity_level") ?: "Moderate"
+                dietaryPreference = document.getString("dietary_preference") ?: "None"
+                calorieIntake = document.getLong("calorie_intake")?.toInt() ?: 2000
+                fetchMealAndRestaurants()
             }
-        }
+            .addOnFailureListener { exception ->
+                errorMessage = "Error fetching user data: ${exception.message}"
+                isLoading = false
+            }
     }
+
+
+    /*    LaunchedEffect(showSuccessMessage) {
+            if (showSuccessMessage) {
+                delay(500) // Wait for 0.5 seconds
+                navController.navigate("main_screen") {
+                    popUpTo("main_screen") { inclusive = true }
+                }
+            }
+        }*/
 
     Scaffold(
         topBar = {
             Column {
                 TopAppBar(title = { Text("AI-Powered Meal Plan") },
                     actions = {
-                        // Refresh icon
+                        IconButton(onClick = { navController.navigate("meal_plan_history_screen") }) {
+                            Icon(
+                                imageVector = Icons.Filled.History,
+                                contentDescription = "Past Saved Meal Plans"
+                            )
+                        }
                         IconButton(onClick = {
-                            // Retry fetching data when clicked
                             isLoading = true
                             fetchMealAndRestaurants()
                         }) {
-                            Icon(imageVector = Icons.Default.Refresh, contentDescription = "Refresh")
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Refresh"
+                            )
                         }
                     })
                 SnackbarHost(hostState = snackbarHostState)
             }
-        }
+        },
+        bottomBar = { BottomNavigationBar(navController) }
+
     ) { paddingValues ->
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -139,10 +174,13 @@ fun MealRecommendationScreen(
                 Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
             }
         } else {
-            Column(modifier = Modifier.padding(paddingValues).padding(16.dp)) {
-                // Meal Plan Section
+            Column(modifier = Modifier
+                .padding(paddingValues)
+                .padding(16.dp)) {
                 Text("Meal Plan:", style = MaterialTheme.typography.titleMedium)
-                LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                LazyColumn(modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)) {
                     items(aiMealPlan) { meal ->
                         Text("- $meal", style = MaterialTheme.typography.bodyMedium)
                     }
@@ -150,9 +188,10 @@ fun MealRecommendationScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Restaurant List Section
                 Text("Nearby Restaurants:", style = MaterialTheme.typography.titleMedium)
-                LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                LazyColumn(modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)) {
                     items(restaurantRecommendations) { business ->
                         RestaurantItem(business)
                     }
@@ -162,6 +201,7 @@ fun MealRecommendationScreen(
 
                 Button(
                     onClick = {
+                        val user = FirebaseAuth.getInstance().currentUser
                         user?.let {
                             val mealHistoryData = hashMapOf(
                                 "uid" to it.uid,
@@ -170,11 +210,11 @@ fun MealRecommendationScreen(
                                 "restaurants" to restaurantRecommendations.map { business ->
                                     mapOf(
                                         "name" to business.name,
-                                        "imageUrl" to business.image_url, //  Store image URL
-                                        "address" to business.location.address1, // Add address
-                                        "rating" to business.rating, // Add rating
-                                        "phone" to business.phone, // Add phone number
-                                        "price" to business.price // Add price
+                                        "imageUrl" to business.image_url,
+                                        "address" to business.location.address1,
+                                        "rating" to business.rating,
+                                        "phone" to business.phone,
+                                        "price" to business.price
                                     )
                                 }
                             )
@@ -208,10 +248,18 @@ fun RestaurantItem(business: Business) {
     var expanded by remember { mutableStateOf(false) } // Track expanded state
     val expandedContent = @Composable {
         Column(modifier = Modifier.padding(8.dp)) {
-            Text(text = "Address: ${business.location.address1 ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
-            Text(text = "Phone: ${business.phone?.takeIf { it.isNotBlank() } ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
-            Text(text = "Rating: ${if (business.rating == 0.0) "Not Available" else "${business.rating} / 5"}", style = MaterialTheme.typography.bodyMedium)
-            Text(text = "Price: ${business.price?.takeIf { it.isNotBlank() } ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = "Address: ${business.location.address1 ?: "Not Available"}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(text = "Phone: ${business.phone?.takeIf { it.isNotBlank() } ?: "Not Available"}",
+                style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = "Rating: ${if (business.rating == 0.0) "Not Available" else "${business.rating} / 5"}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(text = "Price: ${business.price?.takeIf { it.isNotBlank() } ?: "Not Available"}",
+                style = MaterialTheme.typography.bodyMedium)
             Text(
                 text = "Click Here to Open in Google Maps",
                 style = MaterialTheme.typography.bodyMedium.copy(color = Color.Blue),

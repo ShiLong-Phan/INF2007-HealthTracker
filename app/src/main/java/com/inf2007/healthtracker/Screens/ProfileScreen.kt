@@ -16,6 +16,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.BottomNavigation
+import androidx.compose.material.BottomNavigationItem
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Restaurant
+import com.inf2007.healthtracker.utilities.BottomNavigationBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,7 +70,8 @@ fun ProfileScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Profile") }) }
+        topBar = { TopAppBar(title = { Text("Profile") }) },
+        bottomBar = { BottomNavigationBar(navController) }
     ) { paddingValues ->
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -165,9 +173,12 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         // Gender Radio Buttons
-                        Row(verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.border(1.dp, Color.Black)
-                                .padding(8.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .border(1.dp, Color.Black)
+                                .padding(8.dp)
+                        ) {
                             Text("Gender:")
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 RadioButton(
@@ -188,9 +199,13 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         // Activity Level Radio Buttons
-                        Row(verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.border(0.5.dp, Color.Black)
-                                .padding(16.dp)) {                            Text("Activity Level")
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .border(0.5.dp, Color.Black)
+                                .padding(16.dp)
+                        ) {
+                            Text("Activity Level")
                             Column {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     RadioButton(
@@ -236,7 +251,8 @@ fun ProfileScreen(
                                 val weightValue = weight.toDoubleOrNull() ?: 0.0
                                 val heightValue = height.toDoubleOrNull() ?: 0.0
                                 val ageValue = userAge.toIntOrNull() ?: 0
-                                val bmr = calculateBMR(weightValue, heightValue, ageValue, userGender)
+                                val bmr =
+                                    calculateBMR(weightValue, heightValue, ageValue, userGender)
                                 calorieIntake = bmr.toInt().toString()
                                 Toast.makeText(
                                     context,
@@ -311,7 +327,6 @@ fun calculateBMR(weight: Double, height: Double, age: Int, gender: String): Doub
         9.247 * weight + 3.098 * height - 4.330 * age + 447.593
     }
 }
-
 
 
 

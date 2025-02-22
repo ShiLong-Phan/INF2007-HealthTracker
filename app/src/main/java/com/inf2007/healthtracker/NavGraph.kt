@@ -41,37 +41,13 @@ fun NavGraphBuilder.authGraph(navController: NavHostController) {
 }
 
 fun NavGraphBuilder.mainGraph(navController: NavHostController, user: FirebaseUser?) {
-    navigation(startDestination = "main_screen", route = "main_graph") {
+    navigation(startDestination = "dashboard_screen", route = "main_graph") {
         composable("main_screen") {
             if (user != null) {
                 MainScreen(navController)
             }
         }
-        composable(
-            route = "meal_recommendation_screen/{age}/{gender}/{weight}/{height}/{activityLevel}/{dietaryPreference}/{calorieIntake}",
-        ) { backStackEntry ->
 
-            // Extract values from arguments
-            val age = backStackEntry.arguments?.getString("age")?.toIntOrNull() ?: 23
-            val gender = backStackEntry.arguments?.getString("gender") ?: "Male"
-            val weight = backStackEntry.arguments?.getString("weight")?.toIntOrNull() ?: 70
-            val height = backStackEntry.arguments?.getString("height")?.toIntOrNull() ?: 170
-            val activityLevel = backStackEntry.arguments?.getString("activityLevel") ?: "Moderate"
-            val dietaryPreference = backStackEntry.arguments?.getString("dietaryPreference") ?: "None"
-            val calorieIntake = backStackEntry.arguments?.getString("calorieIntake")?.toIntOrNull() ?: 2000
-
-            // Pass extracted values to the screen
-            MealRecommendationScreen(
-                navController = navController,
-                age = age,
-                gender = gender,
-                weight = weight,
-                height = height,
-                activityLevel = activityLevel,
-                dietaryPreference = dietaryPreference,
-                calorieIntake = calorieIntake
-            )
-        }
         composable("profile_screen") {
             ProfileScreen(navController)
         }
@@ -90,6 +66,13 @@ fun NavGraphBuilder.mainGraph(navController: NavHostController, user: FirebaseUs
 
         composable("meal_plan_history_screen") {
             MealPlanHistoryScreen(navController)
+        }
+
+        composable(
+            route = "meal_recommendation_screen/{userId}",
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            MealRecommendationScreen(navController = navController, userId = userId)
         }
 
         composable("meal_plan_history_detail/{uid}/{timestamp}") { backStackEntry ->

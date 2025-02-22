@@ -21,6 +21,7 @@ import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.inf2007.healthtracker.BuildConfig
+import com.inf2007.healthtracker.utilities.BottomNavigationBar
 import com.inf2007.healthtracker.utilities.GeminiService
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -87,7 +88,9 @@ fun CaptureFoodScreen(navController: NavController) {
             TopAppBar(
                 title = { Text(text = "Capture Food") }
             )
-        }
+        },
+        bottomBar = { BottomNavigationBar(navController) }
+
     ) { paddingValues ->
         Column(
             modifier = Modifier

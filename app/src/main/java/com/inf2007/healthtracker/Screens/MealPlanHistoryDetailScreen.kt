@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.google.firebase.firestore.FirebaseFirestore
+import com.inf2007.healthtracker.utilities.BottomNavigationBar
 import com.inf2007.healthtracker.utilities.MealHistory
 import com.inf2007.healthtracker.utilities.Restaurant
 import java.text.SimpleDateFormat
@@ -96,7 +97,9 @@ fun MealPlanHistoryDetailScreen(
                     }
                 }
             )
-        }
+        },
+        bottomBar = { BottomNavigationBar(navController) }
+
     ) { paddingValues ->
         Column(
             modifier = Modifier
