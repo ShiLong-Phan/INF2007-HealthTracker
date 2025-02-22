@@ -1,10 +1,13 @@
 package com.inf2007.healthtracker.Screens
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,6 +22,8 @@ import kotlin.math.min
 import java.text.SimpleDateFormat
 import java.util.*
 
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
@@ -26,27 +31,17 @@ fun DashboardScreen(
     modifier: Modifier = Modifier,
 ) {
     var steps by remember { mutableStateOf(0) }
-
-    /**
-     * Now we derive `calorieIntake` from the sum of all food entries,
-     * so we'll remove the line setting `calorieIntake` from `users` doc.
-     */
     var calorieIntake by remember { mutableStateOf(0) }
     var desiredCalorieIntake by remember { mutableStateOf(0) }
-
     var hydration by remember { mutableStateOf(0) }
     var weight by remember { mutableStateOf(0) }
     var healthTips by remember { mutableStateOf("Fetching AI health tips...") }
-
-    // Example data for new functionalities (like weekly steps)
     var weeklySteps by remember { mutableStateOf(listOf(1000, 1000, 1000, 1000, 1000, 1000, 1000)) }
 
-    // 1) Change daily calorie goal to 1746
     val dailyStepGoal = 10000
     val dailyCalorieGoal = desiredCalorieIntake
     val dailyHydrationGoal = 3200
 
-    // List of food entries for the current user
     var foodEntries by remember { mutableStateOf<List<FoodEntry>>(emptyList()) }
 
     val coroutineScope = rememberCoroutineScope()
@@ -55,6 +50,28 @@ fun DashboardScreen(
     // Fetch user data from Firestore
     LaunchedEffect(Unit) {
         currentUser?.let { user ->
+
+            val calendar = Calendar.getInstance() // Uses TimeZone.getDefault()
+            calendar.time = Date()
+
+
+
+            // Set to the start of today (UTC+8):
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            calendar.set(Calendar.MINUTE, 0)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            val startOfDay = com.google.firebase.Timestamp(calendar.time)
+
+            // Set to the start of tomorrow (UTC+8):
+            calendar.add(Calendar.DAY_OF_MONTH, 1)
+            val endOfDay = com.google.firebase.Timestamp(calendar.time)
+
+            android.util.Log.d("CalendarDebug", "Start of Day: ${calendar.time} | End of Day: $endOfDay")
+
+            val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+            val todayString = dateFormat.format(Date())
+
             // Fetch hydration, weight, and desiredCalorieIntake from `users`:
             FirebaseFirestore.getInstance().collection("users")
                 .document(user.uid)
@@ -66,19 +83,34 @@ fun DashboardScreen(
                 }
 
             // Fetch steps from the `steps` collection:
-            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-            val stepsDocId = "${user.uid}_$dateStr"
+//            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+//            val stepsDocId = "${user.uid}_$dateStr"
+//            FirebaseFirestore.getInstance().collection("steps")
+//                .document(stepsDocId)
+//                .get()
+//                .addOnSuccessListener { doc ->
+//                    steps = doc.getLong("steps")?.toInt() ?: 0
+//                }
+
+            //Code for steps data only for the current day
             FirebaseFirestore.getInstance().collection("steps")
-                .document(stepsDocId)
-                .get()
-                .addOnSuccessListener { doc ->
-                    steps = doc.getLong("steps")?.toInt() ?: 0
+                .whereEqualTo("userId", user.uid) // ensure your steps documents include a "userId" field
+                .whereEqualTo("dateString", todayString)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) return@addSnapshotListener
+                    if (snapshot != null && !snapshot.isEmpty) {
+                        steps = snapshot.documents.sumOf { doc ->
+                            doc.getLong("steps")?.toInt() ?: 0
+                        }
+                    } else {
+                        steps = 0
+                    }
                 }
 
-            // Listen for changes to the `foodEntries` collection:
+            // Listen for changes to the `foodEntries` collection for the current day:
             FirebaseFirestore.getInstance().collection("foodEntries")
                 .whereEqualTo("userId", user.uid)
-                .whereEqualTo("date", dateStr)
+                .whereEqualTo("dateString", todayString)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) return@addSnapshotListener
                     if (snapshot != null && !snapshot.isEmpty) {
@@ -104,7 +136,17 @@ fun DashboardScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Dashboard", textAlign = TextAlign.Center) })
+            TopAppBar(
+                title = { Text("Dashboard", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                actions = {
+                    IconButton(onClick = { navController.navigate("history_screen") }) {
+                        Icon(
+                            imageVector = Icons.Filled.History,
+                            contentDescription = "History"
+                        )
+                    }
+                }
+            )
         }
     ) { paddingValues ->
         // Make content scrollable
@@ -125,19 +167,16 @@ fun DashboardScreen(
             Divider()
 
             HealthStatCard("Steps Taken", "$steps")
-            // 3) Show total calorie intake from food entries
             HealthStatCard("Calorie Intake", "$calorieIntake kcal")
             HealthStatCard("Water Intake", "$hydration ml")
             HealthStatCard("Current Weight", "$weight kg")
 
-            // Daily Goals vs. Actual
             DailyGoalProgress("Steps", steps, dailyStepGoal, "steps")
             DailyGoalProgress("Calories", calorieIntake, dailyCalorieGoal, "kcal")
             DailyGoalProgress("Hydration", hydration, dailyHydrationGoal, "ml")
 
             Divider()
 
-            // Simple Weekly Steps Chart
             Text(
                 text = "Weekly Steps",
                 style = MaterialTheme.typography.titleLarge,
@@ -147,7 +186,6 @@ fun DashboardScreen(
 
             Divider()
 
-            // Food Eaten Section
             Text("Food Eaten", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
             if (foodEntries.isEmpty()) {
                 Text("No entries yet!", style = MaterialTheme.typography.bodyLarge)
@@ -161,7 +199,6 @@ fun DashboardScreen(
 
             Divider()
 
-            // Quick water intake logging
             QuickWaterLogging(
                 onLogWater = { amount ->
                     coroutineScope.launch {
@@ -261,7 +298,6 @@ fun DailyGoalProgress(statLabel: String, currentValue: Int, goalValue: Int, unit
 
 /**
  * A very basic placeholder 'chart' for weekly steps.
- * Replace this with a real chart library if you want a more detailed graph.
  */
 @Composable
 fun WeeklyStepsChart(weeklyData: List<Int>) {
@@ -304,7 +340,6 @@ fun QuickWaterLogging(
         Button(onClick = { onLogWater(1000) }) {
             Text("+1000 ml")
         }
-
     }
     Button(onClick = onResetWater) {
         Text("Reset for testing purposes")
@@ -312,7 +347,7 @@ fun QuickWaterLogging(
 }
 
 /**
- * Card to display a title and value (unchanged from original).
+ * Card to display a title and value.
  */
 @Composable
 fun HealthStatCard(title: String, value: String) {
@@ -335,7 +370,7 @@ fun HealthStatCard(title: String, value: String) {
 }
 
 /**
- * Simulated AI-generated health advice function (unchanged).
+ * Simulated AI-generated health advice function.
  */
 suspend fun fetchAIHealthTips(steps: Int, calorieIntake: Int, hydration: Int, weight: Int): String {
     return "Based on your activity level and nutrition, consider increasing your water intake by 500ml " +

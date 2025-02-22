@@ -23,6 +23,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.inf2007.healthtracker.BuildConfig
 import com.inf2007.healthtracker.utilities.GeminiService
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,13 +59,16 @@ fun CaptureFoodScreen(navController: NavController) {
 
     // Function to save food data to Firestore
     fun saveFoodData(foodName: String, caloricValue: Int) {
+        val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+        val todayString = dateFormat.format(Date())
         val currentUser = FirebaseAuth.getInstance().currentUser
         currentUser?.let {
             val foodData = hashMapOf(
                 "foodName" to foodName,
                 "caloricValue" to caloricValue,
                 "timestamp" to Date(),
-                "userId" to it.uid
+                "userId" to it.uid,
+                "dateString" to todayString
             )
             FirebaseFirestore.getInstance().collection("foodEntries")
                 .add(foodData)
