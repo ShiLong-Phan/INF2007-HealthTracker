@@ -104,7 +104,7 @@ fun StepCounter(user: FirebaseUser, onStepCountUpdated: (Int) -> Unit) {
 
 // Sync Steps to Firestore, updating only today's record
 fun syncStepsToFirestore(user: FirebaseUser, stepCount: Long, stepsRef: DocumentReference) {
-    val timestamp = System.currentTimeMillis()
+    val timestamp = Date()
 
     stepsRef.get().addOnSuccessListener { document ->
         if (document.exists()) {

@@ -58,7 +58,7 @@ class StepCounterService : Service() {
     }
 
     private fun syncStepsToFirestore(userId: String, stepCount: Int) {
-        val stepsRef = firestore.collection("steps").document("${user?.uid}_${getCurrentDate()}")
+        val stepsRef = firestore.collection("steps").document("${user?.uid}_${Date()}")
 
         stepsRef.get().addOnSuccessListener { document ->
             if (document.exists()) {
@@ -66,7 +66,7 @@ class StepCounterService : Service() {
             } else {
                 val stepData = hashMapOf(
                     "steps" to stepCount,
-                    "timestamp" to System.currentTimeMillis(),
+                    "timestamp" to Date(),
                     "userId" to userId
                 )
                 stepsRef.set(stepData)
