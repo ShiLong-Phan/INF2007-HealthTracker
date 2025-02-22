@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.material.DismissDirection
@@ -17,19 +16,17 @@ import androidx.compose.material.rememberDismissState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.inf2007.healthtracker.utilities.MealHistory
-import com.inf2007.healthtracker.utilities.Restaurant
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun MealHistoryScreen(
+fun MealPlanHistoryScreen(
     navController: NavController,
     modifier: Modifier = Modifier
 ) {
@@ -168,7 +165,7 @@ fun MealHistoryItem(navController: NavController, history: MealHistory) {
             .fillMaxWidth()
             .padding(8.dp)
             .clickable {
-                navController.navigate("meal_history_detail/${history.uid}/${history.date.time}")
+                navController.navigate("meal_plan_history_detail/${history.uid}/${history.date.time}")
             },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {

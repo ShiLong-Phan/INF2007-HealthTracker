@@ -78,6 +78,7 @@ fun DashboardScreen(
             // Listen for changes to the `foodEntries` collection:
             FirebaseFirestore.getInstance().collection("foodEntries")
                 .whereEqualTo("userId", user.uid)
+                .whereEqualTo("date", dateStr)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) return@addSnapshotListener
                     if (snapshot != null && !snapshot.isEmpty) {

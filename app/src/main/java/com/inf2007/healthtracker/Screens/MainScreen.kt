@@ -409,7 +409,7 @@ fun ActionButton(text: String, onClick: () -> Unit) {
 fun ViewMealHistoryBtn(navController: NavController) {
     Button(
         onClick = {
-            navController.navigate("meal_history_screen")
+            navController.navigate("meal_plan_history_screen")
         },
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
@@ -417,7 +417,7 @@ fun ViewMealHistoryBtn(navController: NavController) {
         ),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
     ) {
-        Text("View Meal History")
+        Text("View Meal Plan History")
     }
 }
 
