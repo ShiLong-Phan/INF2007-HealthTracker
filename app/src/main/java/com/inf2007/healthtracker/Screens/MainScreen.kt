@@ -16,7 +16,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.inf2007.healthtracker.utilities.StepCounter
 import com.inf2007.healthtracker.utilities.getCurrentDate
 import com.inf2007.healthtracker.utilities.syncStepsToFirestore
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,7 +40,9 @@ fun MainScreen(
     var user by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
     var stepCount by remember { mutableStateOf(0) } // Step count from StepCounter
     val firestore = FirebaseFirestore.getInstance()
-    val stepsRef = firestore.collection("steps").document("${user?.uid}_${Date()}")
+    val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    val formattedDate = dateFormat.format(Date())
+    val stepsRef = firestore.collection("steps").document("${user?.uid}_${formattedDate}")
 
 
     LaunchedEffect(Unit) {
