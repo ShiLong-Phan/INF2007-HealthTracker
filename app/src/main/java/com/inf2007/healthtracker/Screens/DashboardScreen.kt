@@ -21,9 +21,12 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.inf2007.healthtracker.utilities.BottomNavigationBar
 import com.inf2007.healthtracker.utilities.StepCounter
+import com.inf2007.healthtracker.utilities.syncStepsToFirestore
 import kotlinx.coroutines.launch
 import kotlin.math.min
 import java.text.SimpleDateFormat
@@ -396,6 +399,39 @@ fun HealthStatCard(title: String, value: String) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(text = value, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         }
+    }
+}
+
+// New Sync Button (Styled like other buttons)
+@Composable
+fun SyncNowBtn(user: FirebaseUser, stepCount: Int, stepsRef: DocumentReference) {
+    Button(
+        onClick = { syncStepsToFirestore(user, stepCount.toLong(), stepsRef) },
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        ),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
+    ) {
+        Text("Sync Now")
+    }
+}
+
+@Composable
+fun CaptureFoodBtn(navController: NavController) {
+    Button(
+        onClick = {
+            navController.navigate(
+                "capture_food_screen"
+            )
+        },
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        ),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
+    ) {
+        Text("Save Food Data")
     }
 }
 
