@@ -69,7 +69,7 @@ fun LoginScreen(
                     .addOnCompleteListener { task ->
                         isLoading = false
                         if (task.isSuccessful) {
-                            navController.navigate("main_screen")
+                            navController.navigate("dashboard_screen")
                         } else {
                             errorMessage = task.exception?.message ?: "Login failed"
                         }
