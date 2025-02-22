@@ -36,37 +36,22 @@ fun NavGraphBuilder.authGraph(navController: NavHostController) {
     navigation(startDestination = "login_screen", route = "auth_graph") {
         composable("login_screen") { LoginScreen(navController) }
         composable("signup_screen") { SignUpScreen(navController) }
-        composable("main_screen") { MainScreen(navController) }
+        composable("dashboard_screen") { DashboardScreen(navController) }
     }
 }
 
 fun NavGraphBuilder.mainGraph(navController: NavHostController, user: FirebaseUser?) {
     navigation(startDestination = "dashboard_screen", route = "main_graph") {
-        composable("main_screen") {
-            if (user != null) {
-                MainScreen(navController)
-            }
-        }
 
-        composable("profile_screen") {
-            ProfileScreen(navController)
-        }
+        composable("profile_screen") { ProfileScreen(navController) }
 
-        composable("dashboard_screen"){
-            DashboardScreen(navController)
-        }
+        composable("dashboard_screen") { DashboardScreen(navController) }
 
-        composable("history_screen"){
-            HistoryScreen(navController)
-        }
+        composable("history_screen") { HistoryScreen(navController) }
 
-        composable("capture_food_screen"){
-            CaptureFoodScreen(navController)
-        }
+        composable("capture_food_screen") { CaptureFoodScreen(navController) }
 
-        composable("meal_plan_history_screen") {
-            MealPlanHistoryScreen(navController)
-        }
+        composable("meal_plan_history_screen") { MealPlanHistoryScreen(navController) }
 
         composable(
             route = "meal_recommendation_screen/{userId}",

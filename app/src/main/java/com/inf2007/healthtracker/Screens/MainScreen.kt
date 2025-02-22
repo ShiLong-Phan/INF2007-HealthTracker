@@ -1,3 +1,6 @@
+//main screen not used anymore kept for reference
+/*
+
 package com.inf2007.healthtracker.Screens
 
 import androidx.compose.foundation.clickable
@@ -245,4 +248,4 @@ fun ViewMealHistoryBtn(navController: NavController) {
         Text("View Meal Plan History")
     }
 }
-
+*/
