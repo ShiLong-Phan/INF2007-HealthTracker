@@ -47,7 +47,7 @@ class GeminiService(private val apiKey: String) {
 
             response.text?.split("\n") ?: listOf("No meal plan found.")
         } catch (e: Exception) {
-            listOf("Error generating meal plan: ${e.message}")
+            listOf("Error generating meal plan: ${e.message} Please click on the Refresh icon to try again!")
         }
     }
 

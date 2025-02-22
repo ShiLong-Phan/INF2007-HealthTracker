@@ -28,6 +28,7 @@ import kotlinx.coroutines.withContext
 import java.util.*
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalContext
@@ -58,7 +59,8 @@ fun MealRecommendationScreen(
     // ✅ Use Gemini AI SDK
     val geminiService = remember { GeminiService(BuildConfig.geminiApiKey) }
 
-    LaunchedEffect(Unit) {
+    // Function to fetch data
+    val fetchMealAndRestaurants = {
         coroutineScope.launch {
             try {
                 // ✅ Generate Meal Plan Using AI
@@ -95,6 +97,12 @@ fun MealRecommendationScreen(
         }
     }
 
+    // Run the fetch function once when the screen is first loaded
+    LaunchedEffect(Unit) {
+        fetchMealAndRestaurants()
+    }
+
+
     LaunchedEffect(showSuccessMessage) {
         if (showSuccessMessage) {
             delay(500) // Wait for 0.5 seconds
@@ -107,7 +115,17 @@ fun MealRecommendationScreen(
     Scaffold(
         topBar = {
             Column {
-                TopAppBar(title = { Text("AI-Powered Meal Plan") })
+                TopAppBar(title = { Text("AI-Powered Meal Plan") },
+                    actions = {
+                        // Refresh icon
+                        IconButton(onClick = {
+                            // Retry fetching data when clicked
+                            isLoading = true
+                            fetchMealAndRestaurants()
+                        }) {
+                            Icon(imageVector = Icons.Default.Refresh, contentDescription = "Refresh")
+                        }
+                    })
                 SnackbarHost(hostState = snackbarHostState)
             }
         }
