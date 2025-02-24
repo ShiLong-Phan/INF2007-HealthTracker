@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <array name="com_google_android_gms_fonts_certs">
+        <!-- Replace the content below with the actual certificate strings from the Google Fonts documentation -->
+        <item>MIIBIjANBgkqhkiG9w0BAQEFAA...</item>
+    </array>
+</resources>

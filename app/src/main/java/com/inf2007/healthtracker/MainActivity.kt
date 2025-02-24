@@ -57,6 +57,4 @@ class MainActivity : ComponentActivity() {
             ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), PERMISSIONS_REQUEST_CODE)
         }
     }
-
-
 }
