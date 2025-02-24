@@ -61,7 +61,7 @@ fun MealPlanHistoryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Meal History") })
+            TopAppBar(title = { Text("Meal Plan History") })
         },
         bottomBar = { BottomNavigationBar(navController) }
 
@@ -76,6 +76,10 @@ fun MealPlanHistoryScreen(
             } else if (errorMessage.isNotEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
+                }
+            } else if (mealHistory.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No meal plan found.")
                 }
             } else {
                 LazyColumn(
