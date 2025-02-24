@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -19,6 +20,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.google.firebase.firestore.FirebaseFirestore
@@ -38,43 +40,50 @@ fun MealPlanHistoryDetailScreen(
     var mealHistory by remember { mutableStateOf<MealHistory?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
-    var updatedMeals by remember { mutableStateOf(mutableListOf<String>()) }
-    var mealInputState by remember { mutableStateOf(mutableMapOf<String, String>()) } // State to track each meal input separately
+
+    // Use mutableStateListOf so changes trigger recomposition.
+    val updatedMeals = remember { mutableStateListOf<String>() }
+    val originalMeals = remember { mutableStateListOf<String>() }
+    // Track the input for each meal by its index.
+    var mealInputState by remember { mutableStateOf(mutableMapOf<Int, String>()) }
+    // Track whether edits have been saved.
+    var isSaved by remember { mutableStateOf(false) }
 
     val firestore = FirebaseFirestore.getInstance()
 
     LaunchedEffect(Unit) {
         firestore.collection("mealHistory")
             .whereEqualTo("uid", uid)
-            .whereGreaterThanOrEqualTo("date", Date(timestamp - 1000)) // Allow small variation
+            .whereGreaterThanOrEqualTo("date", Date(timestamp - 1000))
             .whereLessThanOrEqualTo("date", Date(timestamp + 1000))
             .get()
             .addOnSuccessListener { snapshot ->
                 snapshot.documents.firstOrNull()?.let { doc ->
                     val meals = doc.get("meals") as? List<String> ?: emptyList()
-
                     val restaurantsRaw = doc.get("restaurants") as? List<Map<String, Any>> ?: emptyList()
-
                     val restaurants = restaurantsRaw.mapNotNull { map ->
                         val name = map["name"] as? String ?: return@mapNotNull null
-                        val imageUrl = map["imageUrl"] as? String ?: return@mapNotNull null // Ensure valid URL
+                        val imageUrl = map["imageUrl"] as? String ?: return@mapNotNull null
                         val address = map["address"] as? String ?: "Not Available"
                         val rating = map["rating"] as? Double ?: 0.0
                         val phone = map["phone"] as? String ?: "Not Available"
                         val price = map["price"] as? String ?: "Not Available"
-
                         Restaurant(name = name, imageUrl = imageUrl, address = address, rating = rating, price = price, phone = phone)
                     }
-
                     mealHistory = MealHistory(
                         uid = uid,
                         date = doc.getDate("date") ?: Date(),
                         meals = meals,
                         restaurants = restaurants,
-                        documentId = doc.id // Save the document ID here
+                        documentId = doc.id
                     )
-                    updatedMeals = meals.toMutableList() // Initialize with the fetched meals
-                    mealInputState = meals.associateWith { it }.toMutableMap() // Initialize input state
+                    originalMeals.clear()
+                    originalMeals.addAll(meals)
+                    updatedMeals.clear()
+                    updatedMeals.addAll(meals)
+                    meals.forEachIndexed { index, meal ->
+                        mealInputState[index] = meal
+                    }
                 }
             }
             .addOnFailureListener { exception ->
@@ -82,6 +91,23 @@ fun MealPlanHistoryDetailScreen(
                 println("Firestore Error: ${exception.message}")
             }
             .addOnCompleteListener { isLoading = false }
+    }
+
+    // Derived state: Check if there are any unsaved edits.
+    val hasEdits by remember {
+        derivedStateOf {
+            updatedMeals.indices.any { index ->
+                updatedMeals[index] != originalMeals.getOrNull(index)
+            }
+        }
+    }
+
+    // Determine button text based on state.
+    val buttonText = when {
+        !hasEdits -> "Edit"
+        hasEdits && !isSaved -> "Save"
+        isSaved -> "Saved"
+        else -> "Edit"
     }
 
     Scaffold(
@@ -95,11 +121,11 @@ fun MealPlanHistoryDetailScreen(
                             contentDescription = "Back"
                         )
                     }
-                }
+                },
+                actions = { /* additional actions if needed */ }
             )
         },
         bottomBar = { BottomNavigationBar(navController) }
-
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -109,72 +135,78 @@ fun MealPlanHistoryDetailScreen(
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.Start
         ) {
-            if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+            when {
+                isLoading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
-            } else if (errorMessage.isNotEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
+                errorMessage.isNotEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
+                    }
                 }
-            } else {
-                mealHistory?.let { history ->
-                    Text(
-                        text = "Date: ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(history.date)}",
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                else -> {
+                    mealHistory?.let { history ->
+                        Text(
+                            text = "Date: ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(history.date)}",
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    // Editable Meal List Section
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween // This aligns the items in the row with space between them
-                    ) {
-                        // Text "Meals:" and button in the same row
-                        Text("Meals:", style = MaterialTheme.typography.titleMedium)
-
-                        // Save button placed on the far-right side of the row
-                        Button(
-                            onClick = { saveMeals(mealInputState, history) },
-                            modifier = Modifier
-                                .size(80.dp, 30.dp) // Smaller button size
+                        // Header Row: "Meals:" and the button on the far right.
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .offset(y = (-3).dp), // Adjust vertical offset to move text higher
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Save", style = MaterialTheme.typography.bodySmall.copy(color = Color.White))
-                            }
-                        }
-
-                    }
-
-                    // Editable Meal List
-                    Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                            items(updatedMeals) { meal ->
-                                EditableMealItem(
-                                    meal = meal,
-                                    mealInputState = mealInputState,
-                                    onMealChange = { updatedMeal ->
-                                        mealInputState[meal] = updatedMeal // Update only the changed meal
+                            Text("Meals:", style = MaterialTheme.typography.titleMedium)
+                            Button(
+                                onClick = {
+                                    saveMeals(mealInputState, history) {
+                                        isSaved = true
+                                        // Also update originalMeals to reflect saved state.
+                                        originalMeals.clear()
+                                        originalMeals.addAll(updatedMeals)
                                     }
-                                )
+                                },
+                                enabled = hasEdits && !isSaved,
+                                modifier = Modifier.size(80.dp, 30.dp)
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize().offset(y = (-3).dp), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = buttonText,
+                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = Color.White)
+                                    )
+                                }
                             }
                         }
-                    }
 
+                        // Editable Meal List using itemsIndexed for stability.
+                        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                                itemsIndexed(updatedMeals) { index, meal ->
+                                    EditableMealItem(
+                                        meal = meal,
+                                        onMealChange = { updatedMeal ->
+                                            updatedMeals[index] = updatedMeal
+                                            mealInputState[index] = updatedMeal
+                                            // Any change resets the saved state.
+                                            isSaved = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    // 🔥 Restaurant List Section with Images
-                    Text("Nearby Restaurants:", style = MaterialTheme.typography.titleMedium)
-                    LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                        items(history.restaurants) { restaurant ->
-                            RestaurantItem(restaurant)
+                        // Restaurant List Section with Images.
+                        Text("Nearby Restaurants:", style = MaterialTheme.typography.titleMedium)
+                        LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                            items(history.restaurants) { restaurant ->
+                                RestaurantItem(restaurant)
+                            }
                         }
                     }
                 }
@@ -183,14 +215,12 @@ fun MealPlanHistoryDetailScreen(
     }
 }
 
-// Editable meal item
 @Composable
 fun EditableMealItem(
     meal: String,
-    mealInputState: MutableMap<String, String>,
     onMealChange: (String) -> Unit
 ) {
-    var mealText by remember { mutableStateOf(mealInputState[meal] ?: meal) }
+    var mealText by remember { mutableStateOf(meal) }
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -200,7 +230,7 @@ fun EditableMealItem(
             value = mealText,
             onValueChange = {
                 mealText = it
-                onMealChange(it) // Call onChange with the new value
+                onMealChange(it)
             },
             modifier = Modifier.weight(1f),
             textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.Black)
@@ -208,29 +238,27 @@ fun EditableMealItem(
     }
 }
 
-// Save the updated meal list to Firestore
-fun saveMeals(mealInputState: Map<String, String>, history: MealHistory) {
+// Modify saveMeals to accept a callback for onSuccess.
+fun saveMeals(mealInputState: Map<Int, String>, history: MealHistory, onSuccess: () -> Unit) {
     val updatedMealData = hashMapOf(
-        "meals" to mealInputState.values.toList() // Updated meals list
-    ) as Map<String, Any> // Cast to Map<String, Any> to match Firestore update requirements
-
+        "meals" to mealInputState.toSortedMap().values.toList()
+    ) as Map<String, Any>
     FirebaseFirestore.getInstance().collection("mealHistory")
-        .document(history.documentId) // Assuming the documentId is available
+        .document(history.documentId)
         .update(updatedMealData)
         .addOnSuccessListener {
-            // Show confirmation
             println("Meals updated successfully!")
+            onSuccess()
         }
         .addOnFailureListener { e ->
-            // Handle error
             println("Failed to update meals: ${e.message}")
         }
 }
 
 @Composable
 fun RestaurantItem(restaurant: Restaurant) {
-    var context = LocalContext.current
-    var expanded by remember { mutableStateOf(false) } // Track expanded state
+    val context = LocalContext.current
+    var expanded by remember { mutableStateOf(false) }
 
     val expandedContent = @Composable {
         Column(modifier = Modifier.padding(8.dp)) {
@@ -240,8 +268,10 @@ fun RestaurantItem(restaurant: Restaurant) {
             Text(text = "Price: ${restaurant.price?.takeIf { it.isNotBlank() } ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
             Text(
                 text = "Click Here to Open in Google Maps",
-                style = MaterialTheme.typography.bodyMedium.copy(color = Color.Blue),
-                textDecoration = TextDecoration.Underline,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = Color.Blue,
+                    textDecoration = TextDecoration.Underline
+                ),
                 modifier = Modifier.clickable {
                     val gmmIntentUri = Uri.parse("geo:0,0?q=${Uri.encode(restaurant.name)}")
                     val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
@@ -257,19 +287,16 @@ fun RestaurantItem(restaurant: Restaurant) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
-            .clickable { expanded = !expanded }, // Toggle expanded state when clicked
+            .clickable { expanded = !expanded },
         horizontalAlignment = Alignment.Start
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
                 model = restaurant.imageUrl,
                 contentDescription = restaurant.name,
                 modifier = Modifier
                     .size(80.dp)
-                    .padding(4.dp)
-                ,
+                    .padding(4.dp),
                 contentScale = ContentScale.Crop
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -283,8 +310,6 @@ fun RestaurantItem(restaurant: Restaurant) {
                 contentDescription = if (expanded) "Collapse" else "Expand"
             )
         }
-
-        // Show more details if expanded
         if (expanded) {
             expandedContent()
         }
