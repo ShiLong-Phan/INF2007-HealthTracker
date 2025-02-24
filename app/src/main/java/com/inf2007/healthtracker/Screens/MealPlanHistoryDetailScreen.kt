@@ -160,7 +160,7 @@ fun MealPlanHistoryDetailScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Meals:", style = MaterialTheme.typography.titleMedium)
+                            Text("Meal Plan:", style = MaterialTheme.typography.titleMedium)
                             Button(
                                 onClick = {
                                     saveMeals(mealInputState, history) {
