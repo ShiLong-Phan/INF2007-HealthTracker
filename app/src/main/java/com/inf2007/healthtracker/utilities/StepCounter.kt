@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -33,6 +34,7 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.inf2007.healthtracker.ui.theme.Secondary
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -102,7 +104,8 @@ fun StepCounter(user: FirebaseUser, onStepCountUpdated: (Int) -> Unit) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        colors = CardDefaults.cardColors(containerColor = Secondary),
+//        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
     ) {
         Column(
             modifier = Modifier
@@ -111,9 +114,9 @@ fun StepCounter(user: FirebaseUser, onStepCountUpdated: (Int) -> Unit) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = "Steps Taken", style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+            Text(text = "Steps Taken", style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, color = Color.White)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = "$stepCount", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+            Text(text = "$stepCount", style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center, color = Color.White)
         }
     }
 }

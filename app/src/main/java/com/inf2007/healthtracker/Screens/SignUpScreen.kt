@@ -23,10 +23,26 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.firestore.FirebaseFirestore
 import android.widget.Toast
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
+import com.inf2007.healthtracker.ui.theme.Primary
+import com.inf2007.healthtracker.ui.theme.Tertiary
+import com.inf2007.healthtracker.ui.theme.Unfocused
+import com.inf2007.healthtracker.ui.theme.montserratFontFamily
 
 @Composable
 fun SignUpScreen(
@@ -42,47 +58,122 @@ fun SignUpScreen(
     var passwordErrorMessage by rememberSaveable { mutableStateOf("") }
     val context = LocalContext.current
 
+    val roundedShape = MaterialTheme.shapes.small
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        TextField(
+        // Header
+        Text(
+            text = "Sign Up".uppercase(),
+            color = Primary,
+            style = MaterialTheme.typography.headlineLarge.copy(
+                letterSpacing = 2.sp
+            )
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+//        TextField(
+//            value = name,
+//            onValueChange = { name = it },
+//            label = { Text("Name") },
+//        )
+
+        // Name Text Field
+        OutlinedTextField(
             value = name,
             onValueChange = { name = it },
             label = { Text("Name") },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Person Icon"
+                )
+            },
+            shape = roundedShape,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Primary,
+                unfocusedBorderColor = Unfocused
+            ),
+            modifier = Modifier.fillMaxWidth()
         )
+
         if (nameErrorMessage.isNotEmpty()) {
             Text(
                 text = nameErrorMessage,
                 color = Color.Red,
             )
         }
-        TextField(
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Email Text Field
+        OutlinedTextField(
             value = email,
             onValueChange = { email = it },
             label = { Text("Email") },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Email,
+                    contentDescription = "Email Icon"
+                )
+            },
+            shape = roundedShape,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Primary,
+                unfocusedBorderColor = Unfocused
+            ),
+            modifier = Modifier.fillMaxWidth()
         )
+
+//        TextField(
+//            value = email,
+//            onValueChange = { email = it },
+//            label = { Text("Email") },
+//        )
         if (emailErrorMessage.isNotEmpty()) {
             Text(
                 text = emailErrorMessage,
                 color = Color.Red,
             )
         }
-        TextField(
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Password Text Field
+        OutlinedTextField(
             value = password,
             onValueChange = { password = it },
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = "Password Icon"
+                )
+            },
+            shape = roundedShape,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Primary,
+                unfocusedBorderColor = Unfocused
+            ),
+            modifier = Modifier.fillMaxWidth()
         )
+
         if (passwordErrorMessage.isNotEmpty()) {
             Text(
                 text = passwordErrorMessage,
                 color = Color.Red,
             )
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         Button(
             onClick = {
                 nameErrorMessage = if (name.isEmpty()) "Name cannot be empty" else ""
@@ -117,12 +208,33 @@ fun SignUpScreen(
                         }
                 }
             },
+            shape = roundedShape,
+            colors = ButtonDefaults.buttonColors(containerColor = Primary),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
         ) {
             if (isLoading) {
                 CircularProgressIndicator(color = Color.White)
             } else {
                 Text("Sign Up")
             }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Sign Up Button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(text = "Have an account? ")
+            Text(
+                text = "Login",
+                color = Tertiary,
+                modifier = Modifier.clickable { navController.navigate("login_screen") },
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

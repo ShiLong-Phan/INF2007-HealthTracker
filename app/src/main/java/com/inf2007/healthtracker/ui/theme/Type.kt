@@ -58,7 +58,7 @@ val Typography = Typography(
     ),
     headlineLarge = TextStyle(
         fontFamily = montserratFontFamily,
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.Bold,
         fontSize = 32.sp,
         lineHeight = 40.sp,
         letterSpacing = 0.sp
@@ -94,9 +94,9 @@ val Typography = Typography(
     titleSmall = TextStyle(
         fontFamily = montserratFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.1.sp
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        letterSpacing = 0.5.sp
     ),
     bodyLarge = TextStyle(
         fontFamily = montserratFontFamily,

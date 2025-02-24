@@ -8,6 +8,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.BottomNavigation
 import androidx.compose.material.BottomNavigationItem
 import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
@@ -31,8 +32,10 @@ import kotlinx.coroutines.launch
 import kotlin.math.min
 import java.text.SimpleDateFormat
 import java.util.*
-
-
+import com.inf2007.healthtracker.ui.theme.Primary
+import com.inf2007.healthtracker.ui.theme.Secondary
+import com.inf2007.healthtracker.ui.theme.Tertiary
+import androidx.compose.ui.graphics.Color
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,15 +68,11 @@ fun DashboardScreen(
     val formattedDate = dateFormat.format(Date())
     val stepsRef = firestore.collection("steps").document("${user?.uid}_${formattedDate}")
 
-
     // Fetch user data from Firestore
     LaunchedEffect(Unit) {
         currentUser?.let { user ->
-
             val calendar = Calendar.getInstance() // Uses TimeZone.getDefault()
             calendar.time = Date()
-
-
 
             // Set to the start of today (UTC+8):
             calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -181,55 +180,50 @@ fun DashboardScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Header
             Text(
                 "Your Daily Summary",
                 style = MaterialTheme.typography.headlineMedium,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                color = Primary
             )
-            HorizontalDivider()
 
-            //HealthStatCard("Steps Taken", "$steps")
-            StepCounter(user!!) { newStepCount ->
-                stepCount = newStepCount
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Step Counter
+                    StepCounter(user!!) { newStepCount ->
+                        stepCount = newStepCount
+                    }
+                    // Calorie Intake
+                    HealthStatCard("Calorie Intake", "$calorieIntake kcal")
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Water Intake
+                    HealthStatCard("Water Intake", "$hydration ml")
+                    // Current Weight
+                    HealthStatCard("Current Weight", "$weight kg")
+                }
             }
-            HealthStatCard("Calorie Intake", "$calorieIntake kcal")
-            HealthStatCard("Water Intake", "$hydration ml")
-            HealthStatCard("Current Weight", "$weight kg")
 
             DailyGoalProgress("Steps", steps, dailyStepGoal, "steps")
             DailyGoalProgress("Calories", calorieIntake, dailyCalorieGoal, "kcal")
             DailyGoalProgress("Hydration", hydration, dailyHydrationGoal, "ml")
 
-            // Add SyncNowBtn here
-            SyncNowBtn(user!!, stepCount, stepsRef)
+            Spacer(modifier = Modifier.height(8.dp))
 
-            HorizontalDivider()
-
-            Text(
-                text = "Weekly Steps",
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center
-            )
-            WeeklyStepsChart(weeklySteps)
-
-            HorizontalDivider()
-
-            Text("Food Eaten", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-            if (foodEntries.isEmpty()) {
-                Text("No entries yet!", style = MaterialTheme.typography.bodyLarge)
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    foodEntries.forEach { entry ->
-                        FoodEntryCard(entry)
-                    }
-                }
-            }
-
-            // Move CaptureFoodBtn here
-            CaptureFoodBtn(navController = navController)
-
-            HorizontalDivider()
-
+            // Log Extra Water
             QuickWaterLogging(
                 onLogWater = { amount ->
                     coroutineScope.launch {
@@ -253,22 +247,55 @@ fun DashboardScreen(
                 }
             )
 
-            HorizontalDivider()
+            Spacer(modifier = Modifier.height(2.dp))
 
+            // Sync Now Button
+            SyncNowBtn(user!!, stepCount, stepsRef)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Weekly Steps
+            Text(
+                text = "Weekly Steps",
+                style = MaterialTheme.typography.titleLarge,
+                textAlign = TextAlign.Center
+            )
+            WeeklyStepsChart(weeklySteps)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Food Eaten
+            Text("Food Eaten", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+            if (foodEntries.isEmpty()) {
+                Text("No entries yet!", style = MaterialTheme.typography.bodyLarge)
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    foodEntries.forEach { entry ->
+                        FoodEntryCard(entry)
+                    }
+                }
+            }
+
+            CaptureFoodBtn(navController = navController)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // AI Health Tips
             Text("AI Health Tips", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White, contentColor = Color.Black),
+                shape = MaterialTheme.shapes.small,
             ) {
                 Text(
                     text = healthTips,
-                    modifier = Modifier.padding(16.dp),
+                     modifier = Modifier.padding(horizontal = 4.dp),
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center
                 )
             }
 
-
+            Spacer(modifier = Modifier.height(2.dp))
         }
     }
 }
@@ -323,7 +350,7 @@ fun DailyGoalProgress(statLabel: String, currentValue: Int, goalValue: Int, unit
         LinearProgressIndicator(
             progress = { progressFraction },
             modifier = Modifier
-                .fillMaxWidth(0.8f)
+                .fillMaxWidth(0.85f)
                 .padding(top = 4.dp),
         )
     }
@@ -341,7 +368,7 @@ fun WeeklyStepsChart(weeklyData: List<Int>) {
                 modifier = Modifier
                     .width(20.dp)
                     .height((100 * fraction).dp)
-                    .background(MaterialTheme.colorScheme.primary)
+                    .background(Secondary)
             )
         }
     }
@@ -357,24 +384,25 @@ fun QuickWaterLogging(
 ) {
     Text(
         text = "Log Extra Water",
-        style = MaterialTheme.typography.titleMedium,
+        style = MaterialTheme.typography.titleSmall,
         textAlign = TextAlign.Center
     )
+
     Row(
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Button(onClick = { onLogWater(250) }) {
+        Button(onClick = { onLogWater(250) }, colors = ButtonDefaults.buttonColors(containerColor = Secondary)) {
             Text("+250 ml")
         }
-        Button(onClick = { onLogWater(500) }) {
+        Button(onClick = { onLogWater(500) }, colors = ButtonDefaults.buttonColors(containerColor = Secondary)) {
             Text("+500 ml")
         }
-        Button(onClick = { onLogWater(1000) }) {
+        Button(onClick = { onLogWater(1000) }, colors = ButtonDefaults.buttonColors(containerColor = Secondary)) {
             Text("+1000 ml")
         }
     }
-    Button(onClick = onResetWater) {
+
+    Button(onClick = onResetWater, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Tertiary)) {
         Text("Reset for testing purposes")
     }
 }
@@ -386,18 +414,19 @@ fun QuickWaterLogging(
 fun HealthStatCard(title: String, value: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        colors = CardDefaults.cardColors(containerColor = Secondary),
+        shape = MaterialTheme.shapes.small
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+            Text(text = title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, color = Color.White)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = value, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+            Text(text = value, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center, color = Color.White)
         }
     }
 }
@@ -408,10 +437,11 @@ fun SyncNowBtn(user: FirebaseUser, stepCount: Int, stepsRef: DocumentReference) 
     Button(
         onClick = { syncStepsToFirestore(user, stepCount.toLong(), stepsRef) },
         colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
+            containerColor = Primary,
             contentColor = MaterialTheme.colorScheme.onPrimary
         ),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
+        shape = MaterialTheme.shapes.small,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(56.dp)
     ) {
         Text("Sync Now")
     }
@@ -425,13 +455,14 @@ fun CaptureFoodBtn(navController: NavController) {
                 "capture_food_screen"
             )
         },
+        shape = MaterialTheme.shapes.small,
         colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
+            containerColor = Primary,
             contentColor = MaterialTheme.colorScheme.onPrimary
         ),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(56.dp)
     ) {
-        Text("Save Food Data")
+        Text("Add Food Data")
     }
 }
 

@@ -71,8 +71,6 @@ fun LoginScreen(
             text = "Login".uppercase(),
             color = Primary,
             style = MaterialTheme.typography.headlineLarge.copy(
-                fontFamily = montserratFontFamily, // Use your desired font family
-                fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp
             )
         )
