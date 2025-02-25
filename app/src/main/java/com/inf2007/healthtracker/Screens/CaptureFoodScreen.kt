@@ -64,6 +64,15 @@ fun CaptureFoodScreen(navController: NavController) {
         }
     }
 
+    // Function to reset fields
+    fun resetFields() {
+        foodName = ""
+        imageBitmap = null
+        recognizedFood = null
+        errorMessage = ""
+    }
+
+
     // Function to save food data to Firestore
     fun saveFoodData(foodName: String, caloricValue: Int) {
         val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
@@ -79,15 +88,27 @@ fun CaptureFoodScreen(navController: NavController) {
             )
             FirebaseFirestore.getInstance().collection("foodEntries")
                 .add(foodData)
-                .addOnSuccessListener { Log.d("CaptureFoodScreen", "Food data saved successfully") }
-                .addOnFailureListener { e -> Log.w("CaptureFoodScreen", "Error saving food data", e) }
+                .addOnSuccessListener {
+                    Log.d("CaptureFoodScreen", "Food data saved successfully")
+                    resetFields()
+                    navController.popBackStack()
+                }
+                .addOnFailureListener { e ->
+                    Log.w(
+                        "CaptureFoodScreen",
+                        "Error saving food data",
+                        e
+                    )
+                }
         }
     }
 
+
     // Camera launcher
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        imageBitmap = bitmap
-    }
+    val cameraLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
+            imageBitmap = bitmap
+        }
 
     Scaffold(
         topBar = {
@@ -115,7 +136,11 @@ fun CaptureFoodScreen(navController: NavController) {
                 contentAlignment = Alignment.Center
             ) {
                 imageBitmap?.let {
-                    Image(bitmap = it.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize())
+                    Image(
+                        bitmap = it.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 } ?: Text("Tap to capture image", color = Color.White)
             }
 
@@ -132,7 +157,9 @@ fun CaptureFoodScreen(navController: NavController) {
                         recognizeFood(bitmap, foodName)
                     }
                 },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp)
             ) {
                 Text("Recognize Food")
             }
@@ -140,15 +167,23 @@ fun CaptureFoodScreen(navController: NavController) {
             // Display recognized food
             recognizedFood?.let {
                 Log.i("CaptureFoodScreen", "Recognized food: ${it}")
-                Text("Recognized Food: Based on the image and typical ingredients of $foodName", style = MaterialTheme.typography.bodyLarge)
-                Text("Estimated Calories: ${it.second} kcal", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    "Recognized Food: Based on the image and typical ingredients of $foodName",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    "Estimated Calories: ${it.second} kcal",
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
 
             // Save food data button
             Button(
                 onClick = { recognizedFood?.let { saveFoodData(foodName, it.second) } },
                 enabled = foodName.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp)
             ) {
                 Text("Save Food Data")
             }
