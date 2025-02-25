@@ -58,14 +58,21 @@ class GeminiService(private val apiKey: String) {
             image.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream) // Adjust quality as needed
             val byteArray = byteArrayOutputStream.toByteArray()
             val base64Image = Base64.encodeToString(byteArray, Base64.DEFAULT)
-
-            val prompt = """
+            var prompt = ""
+            if (!base64Image.isEmpty()) {
+                prompt = """
                 Determine the estimated caloric value of the provided image of $foodName.
                 Image (Base64 encoded): $base64Image
                 
 
                 Provide the caloric value in kcal in the format "Calories: <value> kcal". DO NOT PROVIDE A RANGE
             """.trimIndent()
+            }else{
+                prompt = """
+                Determine the estimated caloric value of 1 serving of $foodName.
+                """.trimIndent()
+            }
+
 
             val response = foodRecognitionModel.generateContent(
                 Content(parts = listOf(TextPart(prompt)))

@@ -42,6 +42,12 @@ fun CaptureFoodScreen(navController: NavController) {
 
     // Function to handle food recognition
     fun recognizeFood(image: Bitmap, foodName: String) {
+
+        if (image == null && foodName.isBlank()) {
+            errorMessage = "Please enter food name and photo"
+            return
+        }
+
         coroutineScope.launch {
             try {
                 val result = geminiService.doFoodRecognition(image, foodName)
