@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
@@ -30,10 +31,11 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CaptureFoodScreen(navController: NavController) {
-    var foodName by remember { mutableStateOf("") }
-    var imageBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var recognizedFood by remember { mutableStateOf<Pair<String, Int>?>(null) }
-    var errorMessage by remember { mutableStateOf("") }
+    var foodName by mutableStateOf("")
+    var imageBitmap by mutableStateOf<Bitmap?>(null)
+    var recognizedFood by mutableStateOf<Pair<String, Int>?>(null)
+    var caloricValue by mutableStateOf("")
+    var errorMessage by mutableStateOf("")
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -41,8 +43,7 @@ fun CaptureFoodScreen(navController: NavController) {
     val geminiService = remember { GeminiService(BuildConfig.geminiApiKey) }
 
     // Function to handle food recognition
-    fun recognizeFood(image: Bitmap, foodName: String) {
-
+    fun recognizeFood(image: Bitmap?, foodName: String) {
         if (image == null && foodName.isBlank()) {
             errorMessage = "Please enter food name and photo"
             return
@@ -54,22 +55,15 @@ fun CaptureFoodScreen(navController: NavController) {
                 Log.i("CaptureFoodScreen", "Food recognition result: $result")
 
                 val responseText = result.firstOrNull() ?: ""
-                val caloricValue = responseText.filter { it.isDigit() }.toIntOrNull() ?: 0
-                Log.i("CaptureFoodScreen", "Food recognition caloric value: $caloricValue")
+                val estimatedCaloricValue = responseText.filter { it.isDigit() }.toIntOrNull() ?: 0
+                Log.i("CaptureFoodScreen", "Food recognition caloric value: $estimatedCaloricValue")
 
-                recognizedFood = result.firstOrNull()?.let { Pair(it, caloricValue) }
+                recognizedFood = result.firstOrNull()?.let { Pair(it, estimatedCaloricValue) }
+                caloricValue = estimatedCaloricValue.toString()
             } catch (e: Exception) {
                 errorMessage = "Error recognizing food: ${e.message}"
             }
         }
-    }
-
-    // Function to reset fields
-    fun resetFields() {
-        foodName = ""
-        imageBitmap = null
-        recognizedFood = null
-        errorMessage = ""
     }
 
 
@@ -90,7 +84,6 @@ fun CaptureFoodScreen(navController: NavController) {
                 .add(foodData)
                 .addOnSuccessListener {
                     Log.d("CaptureFoodScreen", "Food data saved successfully")
-                    resetFields()
                     navController.popBackStack()
                 }
                 .addOnFailureListener { e ->
@@ -141,39 +134,49 @@ fun CaptureFoodScreen(navController: NavController) {
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize()
                     )
-                } ?: Text("Tap to capture image", color = Color.White)
+                } ?: Text(
+                    "Tap to Capture Image\n(Not Compulsory)",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        textAlign = TextAlign.Center
+                    )
+                )
             }
 
             TextField(
                 value = foodName,
                 onValueChange = { foodName = it },
-                label = { Text("Food Name") }
+                label = { Text("Food Name*") }
             )
 
             // Recognize food button
             Button(
                 onClick = {
-                    imageBitmap?.let { bitmap ->
-                        recognizeFood(bitmap, foodName)
-                    }
+                    recognizeFood(imageBitmap, foodName)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 32.dp)
             ) {
-                Text("Recognize Food")
+                Text("Calculate Estimated Caloric Value of: $foodName")
             }
 
             // Display recognized food
             recognizedFood?.let {
+                caloricValue = it.second.toString()
                 Log.i("CaptureFoodScreen", "Recognized food: ${it}")
                 Text(
                     "Recognized Food: Based on the image and typical ingredients of $foodName",
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    "Estimated Calories: ${it.second} kcal",
-                    style = MaterialTheme.typography.bodyLarge
+                    "Estimated Calories in kcal:"
+                )
+                TextField(
+                    value = caloricValue,
+                    onValueChange = { caloricValue = it },
+                    label = { Text("Caloric Value") },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 

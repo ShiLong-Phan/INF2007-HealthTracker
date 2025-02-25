@@ -6,6 +6,8 @@ import com.google.ai.client.generativeai.type.Content
 import com.google.ai.client.generativeai.type.TextPart
 import java.io.ByteArrayOutputStream
 import android.util.Base64
+import android.util.Log
+
 class GeminiService(private val apiKey: String) {
 
     private val generativeModel = GenerativeModel(
@@ -51,36 +53,35 @@ class GeminiService(private val apiKey: String) {
         }
     }
 
-    suspend fun doFoodRecognition(image: Bitmap, foodName: String): List<String> {
+    suspend fun doFoodRecognition(image: Bitmap?, foodName: String): List<String> {
         return try {
-            // 1. Encode Bitmap to Base64
-            val byteArrayOutputStream = ByteArrayOutputStream()
-            image.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream) // Adjust quality as needed
-            val byteArray = byteArrayOutputStream.toByteArray()
-            val base64Image = Base64.encodeToString(byteArray, Base64.DEFAULT)
-            var prompt = ""
-            if (!base64Image.isEmpty()) {
-                prompt = """
-                Determine the estimated caloric value of the provided image of $foodName.
-                Image (Base64 encoded): $base64Image
-                
+            val prompt = if (image != null) {
+                // Encode Bitmap to Base64
+                val byteArrayOutputStream = ByteArrayOutputStream()
+                image.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream) // Adjust quality as needed
+                val byteArray = byteArrayOutputStream.toByteArray()
+                val base64Image = Base64.encodeToString(byteArray, Base64.DEFAULT)
+                """
+            Determine the estimated caloric value of the provided image of $foodName.
+            Image (Base64 encoded): $base64Image
 
-                Provide the caloric value in kcal in the format "Calories: <value> kcal". DO NOT PROVIDE A RANGE
+            Provide the caloric value in kcal in the format "Calories: <value> kcal". DO NOT PROVIDE A RANGE
             """.trimIndent()
-            }else{
-                prompt = """
-                Determine the estimated caloric value of 1 serving of $foodName.
-                """.trimIndent()
-            }
+            } else {
+                """
+            Determine the estimated caloric value of 1 serving of $foodName.
 
+            Provide the caloric value in kcal in the format "Calories: <value> kcal". DO NOT PROVIDE A RANGE
+            """.trimIndent()
+            }
 
             val response = foodRecognitionModel.generateContent(
                 Content(parts = listOf(TextPart(prompt)))
             )
 
-            response.text?.split("\n") ?: listOf("No meal plan found.")
+            response.text?.split("\n") ?: listOf("No caloric value found.")
         } catch (e: Exception) {
-            listOf("Error generating meal plan: ${e.message}")
+            listOf("Error generating caloric value: ${e.message}")
         }
     }
 }
