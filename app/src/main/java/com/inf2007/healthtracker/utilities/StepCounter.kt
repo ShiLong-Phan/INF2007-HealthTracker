@@ -35,6 +35,7 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.inf2007.healthtracker.ui.theme.Secondary
+import com.inf2007.healthtracker.ui.theme.SecondaryContainer
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -114,9 +115,9 @@ fun StepCounter(user: FirebaseUser, onStepCountUpdated: (Int) -> Unit) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = "Steps Taken", style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, color = Color.White)
+            Text(text = "Steps Taken", style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center, color = SecondaryContainer)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = "$stepCount", style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center, color = Color.White)
+            Text(text = "$stepCount", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center, color = Color.White)
         }
     }
 }

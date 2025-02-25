@@ -1,7 +1,9 @@
 package com.inf2007.healthtracker.Screens
 
 import android.util.Log
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -11,9 +13,8 @@ import androidx.compose.material3.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,8 +35,13 @@ import java.text.SimpleDateFormat
 import java.util.*
 import com.inf2007.healthtracker.ui.theme.Primary
 import com.inf2007.healthtracker.ui.theme.Secondary
+import com.inf2007.healthtracker.ui.theme.SecondaryContainer
 import com.inf2007.healthtracker.ui.theme.Tertiary
+import com.inf2007.healthtracker.ui.theme.Unfocused
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.runtime.remember
+import androidx.compose.animation.animateColorAsState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -221,8 +227,6 @@ fun DashboardScreen(
             DailyGoalProgress("Calories", calorieIntake, dailyCalorieGoal, "kcal")
             DailyGoalProgress("Hydration", hydration, dailyHydrationGoal, "ml")
 
-            Spacer(modifier = Modifier.height(8.dp))
-
             // Log Extra Water
             QuickWaterLogging(
                 onLogWater = { amount ->
@@ -284,12 +288,12 @@ fun DashboardScreen(
             Text("AI Health Tips", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
             Card(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White, contentColor = Color.Black),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background, contentColor = Color.Black),
                 shape = MaterialTheme.shapes.small,
             ) {
                 Text(
                     text = healthTips,
-                     modifier = Modifier.padding(horizontal = 4.dp),
+                    modifier = Modifier.padding(horizontal = 4.dp),
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center
                 )
@@ -343,15 +347,21 @@ fun DailyGoalProgress(statLabel: String, currentValue: Int, goalValue: Int, unit
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.Start
     ) {
-        Text("$statLabel: $currentValue / $goalValue $unit", style = MaterialTheme.typography.bodyLarge)
+        Text(
+            text = "$statLabel: $currentValue / $goalValue $unit",
+            style = MaterialTheme.typography.bodyLarge,  // Using bodyLarge for Normal font weight
+            modifier = Modifier.fillMaxWidth()
+        )
         LinearProgressIndicator(
             progress = { progressFraction },
             modifier = Modifier
-                .fillMaxWidth(0.85f)
+                .fillMaxWidth()
                 .padding(top = 4.dp),
+            color = Secondary,  // The actual progress line
+            trackColor = SecondaryContainer
         )
     }
 }
@@ -382,28 +392,93 @@ fun QuickWaterLogging(
     onLogWater: (Int) -> Unit,
     onResetWater: () -> Unit
 ) {
-    Text(
-        text = "Log Extra Water",
-        style = MaterialTheme.typography.titleSmall,
-        textAlign = TextAlign.Center
-    )
-
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        Button(onClick = { onLogWater(250) }, colors = ButtonDefaults.buttonColors(containerColor = Secondary)) {
-            Text("+250 ml")
-        }
-        Button(onClick = { onLogWater(500) }, colors = ButtonDefaults.buttonColors(containerColor = Secondary)) {
-            Text("+500 ml")
-        }
-        Button(onClick = { onLogWater(1000) }, colors = ButtonDefaults.buttonColors(containerColor = Secondary)) {
-            Text("+1000 ml")
-        }
-    }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Log Extra Water",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f)
+            )
 
-    Button(onClick = onResetWater, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Tertiary)) {
-        Text("Reset for testing purposes")
+            Button(
+                onClick = onResetWater,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    contentColor = Tertiary
+                ),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.RestartAlt,
+                    contentDescription = "Reset",
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Reset")
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val interactionSource = remember { MutableInteractionSource() }
+
+            OutlinedButton(
+                onClick = { onLogWater(250) },
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    contentColor = Unfocused
+                ),
+                border = BorderStroke(1.dp, Unfocused),
+                interactionSource = interactionSource
+            ) {
+                val isPressed = interactionSource.collectIsPressedAsState()
+                Text(
+                    "+250 ml",
+                    color = if (isPressed.value) Primary else Unfocused
+                )
+            }
+
+            OutlinedButton(
+                onClick = { onLogWater(500) },
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    contentColor = Unfocused
+                ),
+                border = BorderStroke(1.dp, Unfocused),
+                interactionSource = interactionSource
+            ) {
+                val isPressed = interactionSource.collectIsPressedAsState()
+                Text(
+                    "+500 ml",
+                    color = if (isPressed.value) Primary else Unfocused
+                )
+            }
+
+            OutlinedButton(
+                onClick = { onLogWater(1000) },
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    contentColor = Unfocused
+                ),
+                border = BorderStroke(1.dp, Unfocused),
+                interactionSource = interactionSource
+            ) {
+                val isPressed = interactionSource.collectIsPressedAsState()
+                Text(
+                    "+1000 ml",
+                    color = if (isPressed.value) Primary else Unfocused
+                )
+            }
+        }
     }
 }
 
@@ -424,9 +499,9 @@ fun HealthStatCard(title: String, value: String) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, color = Color.White)
+            Text(text = title, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center, color = SecondaryContainer)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = value, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center, color = Color.White)
+            Text(text = value, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center, color = Color.White)
         }
     }
 }
