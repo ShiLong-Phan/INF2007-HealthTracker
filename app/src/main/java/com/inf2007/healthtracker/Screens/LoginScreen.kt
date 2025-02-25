@@ -44,9 +44,6 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 
-import com.inf2007.healthtracker.ui.theme.montserratFontFamily
-
-
 @Composable
 fun LoginScreen(
     navController: NavController,

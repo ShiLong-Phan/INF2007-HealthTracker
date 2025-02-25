@@ -19,10 +19,22 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.BottomNavigation
 import androidx.compose.material.BottomNavigationItem
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import com.inf2007.healthtracker.utilities.BottomNavigationBar
+import com.inf2007.healthtracker.ui.theme.Primary
+import com.inf2007.healthtracker.ui.theme.Secondary
+import com.inf2007.healthtracker.ui.theme.SecondaryContainer
+import com.inf2007.healthtracker.ui.theme.Tertiary
+import com.inf2007.healthtracker.ui.theme.Unfocused
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +56,8 @@ fun ProfileScreen(
     var errorMessage by remember { mutableStateOf("") }
     val context = LocalContext.current
     val user = FirebaseAuth.getInstance().currentUser
+
+    val roundedShape = MaterialTheme.shapes.small
 
     // Fetch user data from Firebase
     LaunchedEffect(Unit) {
@@ -86,55 +100,246 @@ fun ProfileScreen(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center,
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 item {
                     if (!isEditing) {
                         // View Mode
-                        Text("Name: $userName", style = MaterialTheme.typography.bodyLarge)
-                        Text("Email: $userEmail", style = MaterialTheme.typography.bodyLarge)
-                        Text("Gender: $userGender", style = MaterialTheme.typography.bodyLarge)
-                        Text("Weight: $weight kg", style = MaterialTheme.typography.bodyLarge)
-                        Text("Height: $height cm", style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            "Activity Level: $activityLevel",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Text(
-                            "Dietary Preference: $dietaryPreference",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Text(
-                            "Calorie Intake: $calorieIntake kcal",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Button(
-                            onClick = { isEditing = true } // Enable Edit Mode
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.Top
                         ) {
-                            Text("Edit Profile")
+                            // Texts to the left
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = "$userName",
+                                    style = MaterialTheme.typography.headlineLarge
+                                )
+                                Text(
+                                    text = "$userEmail",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Normal)
+                                )
+                            }
+
+                            // Edit icon to the right
+                            IconButton(
+                                onClick = { isEditing = true },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit Profile",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Button(
-                            onClick = {
-                                FirebaseAuth.getInstance().signOut()
-                                navController.navigate("login_screen") {
-                                    popUpTo("main_screen") { inclusive = true }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
-                            )
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            shape = roundedShape,
+                            colors = CardDefaults.cardColors(containerColor = Secondary)
                         ) {
-                            Text("Logout")
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = buildAnnotatedString {
+                                        withStyle(
+                                            style = MaterialTheme.typography.titleSmall.toSpanStyle()
+                                                .copy(color = MaterialTheme.colorScheme.secondaryContainer)
+                                        ) {
+                                            append("Gender\n")
+                                        }
+                                        withStyle(
+                                            style = MaterialTheme.typography.bodyLarge.toSpanStyle()
+                                                .copy(color = Color.White)
+                                        ) {
+                                            append("$userGender")
+                                        }
+                                    },
+                                    textAlign = TextAlign.Center
+                                )
+
+                                VerticalDivider(
+                                    modifier = Modifier
+                                        .height(40.dp)
+                                        .width(1.dp),
+                                    color = Color.White
+                                )
+
+                                Text(
+                                    text = buildAnnotatedString {
+                                        withStyle(
+                                            style = MaterialTheme.typography.titleSmall.toSpanStyle()
+                                                .copy(color = MaterialTheme.colorScheme.secondaryContainer)
+                                        ) {
+                                            append("Weight\n")
+                                        }
+                                        withStyle(
+                                            style = MaterialTheme.typography.bodyLarge.toSpanStyle()
+                                                .copy(color = Color.White)
+                                        ) {
+                                            append("$weight kg")
+                                        }
+                                    },
+                                    textAlign = TextAlign.Center
+                                )
+
+                                VerticalDivider(
+                                    modifier = Modifier
+                                        .height(40.dp)
+                                        .width(1.dp),
+                                    color = Color.White
+                                )
+
+                                Text(
+                                    text = buildAnnotatedString {
+                                        withStyle(
+                                            style = MaterialTheme.typography.titleSmall.toSpanStyle()
+                                                .copy(color = MaterialTheme.colorScheme.secondaryContainer)
+                                        ) {
+                                            append("Height\n")
+                                        }
+                                        withStyle(
+                                            style = MaterialTheme.typography.bodyLarge.toSpanStyle()
+                                                .copy(color = Color.White)
+                                        ) {
+                                            append("$height cm")
+                                        }
+                                    },
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Activity Level Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FitnessCenter,
+                                    contentDescription = "Activity Level Icon",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                Text(
+                                    text = "Activity Level",
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                                )
+
+                                Spacer(modifier = Modifier.weight(1f))  // Pushes the value to the right
+
+                                Text(
+                                    text = "$activityLevel",
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+
+                            // Dietary Preference Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Restaurant,
+                                    contentDescription = "Dietary Preference",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                Text(
+                                    text = "Dietary Preference",
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                                )
+
+                                Spacer(modifier = Modifier.weight(1f))  // Pushes the value to the right
+
+                                Text(
+                                    text = "$dietaryPreference",
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+
+                            // Calorie Intake Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                                    contentDescription = "Calorie Intake Icon",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                Text(
+                                    text = "Calorie Intake",
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                                )
+
+                                Spacer(modifier = Modifier.weight(1f))  // Pushes the value to the right
+
+                                Text(
+                                    text = "$calorieIntake kcal",
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+
+                            // Logout Row
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        FirebaseAuth.getInstance().signOut()
+                                        navController.navigate("login_screen") {
+                                            popUpTo("main_screen") { inclusive = true }
+                                        }
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                    contentDescription = "Logout",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = Color.Red
+                                )
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                Text(
+                                    text = "Logout",
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = Color.Red
+                                )
+                            }
+                        }
+
                     } else {
                         // Edit Mode
                         TextField(
