@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
+import com.inf2007.healthtracker.ui.theme.Primary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -128,15 +129,14 @@ fun MealRecommendationScreen(
             }
     }
 
-
-    /*    LaunchedEffect(showSuccessMessage) {
-            if (showSuccessMessage) {
-                delay(500) // Wait for 0.5 seconds
-                navController.navigate("main_screen") {
-                    popUpTo("main_screen") { inclusive = true }
-                }
-            }
-        }*/
+//    LaunchedEffect(showSuccessMessage) {
+//        if (showSuccessMessage) {
+//            delay(500) // Wait for 0.5 seconds
+//            navController.navigate("main_screen") {
+//                popUpTo("main_screen") { inclusive = true }
+//            }
+//        }
+//    }
 
     Scaffold(
         topBar = {
@@ -177,11 +177,9 @@ fun MealRecommendationScreen(
         } else {
             Column(modifier = Modifier
                 .padding(paddingValues)
-                .padding(16.dp)) {
-                Text("Meal Plan:", style = MaterialTheme.typography.titleMedium)
-                LazyColumn(modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)) {
+                .padding(horizontal = 40.dp, vertical = 16.dp)) {
+                Text("Meal Plan", style = MaterialTheme.typography.titleLarge)
+                LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp).weight(1f)) {
                     items(aiMealPlan) { meal ->
                         Text("- $meal", style = MaterialTheme.typography.bodyMedium)
                     }
@@ -189,10 +187,8 @@ fun MealRecommendationScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text("Nearby Restaurants:", style = MaterialTheme.typography.titleMedium)
-                LazyColumn(modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)) {
+                Text("Nearby Restaurants", style = MaterialTheme.typography.titleLarge)
+                LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp).weight(1f)) {
                     items(restaurantRecommendations) { business ->
                         RestaurantItem(business)
                     }
@@ -234,7 +230,9 @@ fun MealRecommendationScreen(
                                 }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = MaterialTheme.shapes.small,
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
                 ) {
                     Text("Save Meal History")
                 }

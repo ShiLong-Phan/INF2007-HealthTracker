@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
@@ -20,12 +21,19 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.inf2007.healthtracker.ui.theme.Primary
+import com.inf2007.healthtracker.ui.theme.Unfocused
 import com.inf2007.healthtracker.utilities.BottomNavigationBar
 import com.inf2007.healthtracker.utilities.MealHistory
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import com.inf2007.healthtracker.ui.theme.Secondary
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
+
 @Composable
 fun MealPlanHistoryScreen(
     navController: NavController,
@@ -85,7 +93,8 @@ fun MealPlanHistoryScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(16.dp)
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(
                         items = mealHistory,
@@ -102,6 +111,7 @@ fun MealPlanHistoryScreen(
                                 false
                             }
                         )
+
                         SwipeToDismiss(
                             state = dismissState,
                             directions = setOf(DismissDirection.EndToStart),
@@ -114,9 +124,11 @@ fun MealPlanHistoryScreen(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
+                                        .clip(RoundedCornerShape(16.dp))
                                         .background(color)
                                         .padding(8.dp),
-                                    contentAlignment = Alignment.CenterEnd
+                                    contentAlignment = Alignment.CenterEnd,
+
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Delete,
@@ -173,19 +185,18 @@ fun MealPlanHistoryScreen(
 @Composable
 fun MealHistoryItem(navController: NavController, history: MealHistory) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-            .clickable {
-                navController.navigate("meal_plan_history_detail/${history.uid}/${history.date.time}")
-            },
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clickable { navController.navigate("meal_plan_history_detail/${history.uid}/${history.date.time}") },
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = MaterialTheme.shapes.small,
+        colors = CardDefaults.cardColors(containerColor = Secondary, contentColor = Color.White),
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column {
+            Column (
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ){
                 Text(
                     text = "Date: ${
                         SimpleDateFormat(
@@ -193,15 +204,15 @@ fun MealHistoryItem(navController: NavController, history: MealHistory) {
                             Locale.getDefault()
                         ).format(history.date)
                     }",
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.secondaryContainer)
                 )
                 Text(
                     text = "Meals: ${history.meals.size} items",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
                     text = "Restaurants: ${history.restaurants.size} places",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
         }
