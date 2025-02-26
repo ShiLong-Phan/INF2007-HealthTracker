@@ -119,7 +119,7 @@ fun ProfileScreen(
                                 .padding(horizontal = 16.dp),
                             verticalAlignment = Alignment.Top
                         ) {
-                            // Texts to the left
+                            // Texts on the left
                             Column(
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -133,7 +133,7 @@ fun ProfileScreen(
                                 )
                             }
 
-                            // Edit icon to the right
+                            // Edit icon on the right
                             IconButton(
                                 onClick = { isEditing = true },
                                 modifier = Modifier.size(24.dp)
@@ -153,6 +153,7 @@ fun ProfileScreen(
                             shape = roundedShape,
                             colors = CardDefaults.cardColors(containerColor = Secondary)
                         ) {
+                            // User Details
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -160,6 +161,7 @@ fun ProfileScreen(
                                 horizontalArrangement = Arrangement.SpaceEvenly,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                // Gender
                                 Text(
                                     text = buildAnnotatedString {
                                         withStyle(
@@ -185,6 +187,7 @@ fun ProfileScreen(
                                     color = Color.White
                                 )
 
+                                // Weight
                                 Text(
                                     text = buildAnnotatedString {
                                         withStyle(
@@ -210,6 +213,7 @@ fun ProfileScreen(
                                     color = Color.White
                                 )
 
+                                // Height
                                 Text(
                                     text = buildAnnotatedString {
                                         withStyle(
@@ -409,11 +413,11 @@ fun ProfileScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
 
+                            // Dietary Preference and Calorie Intake Row
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                // Dietary Preference Column
                                 Column(
                                     modifier = Modifier.weight(1f) // Makes this column take up half of the row's width
                                 ) {
@@ -445,11 +449,10 @@ fun ProfileScreen(
                                     )
                                 }
 
-                                // Desired Calorie Intake Column
                                 Column(
                                     modifier = Modifier.weight(1f)
                                 ) {
-                                    // Desired Calorie Intake Text Field
+                                    // Calorie Intake Text Field
                                     OutlinedTextField(
                                         value = calorieIntake,
                                         onValueChange = { calorieIntake = it },
@@ -475,6 +478,7 @@ fun ProfileScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ){
+                                // Weight Text Field
                                 OutlinedTextField(
                                     value = weight,
                                     onValueChange = { weight = it },
@@ -493,6 +497,7 @@ fun ProfileScreen(
                                     modifier = Modifier.weight(1f)
                                 )
 
+                                // Height Text Field
                                 OutlinedTextField(
                                     value = height,
                                     onValueChange = { height = it },
@@ -537,10 +542,7 @@ fun ProfileScreen(
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(0.dp)
                             ) {
-                                // Activity Level Label
                                 Text("Activity Level", style = MaterialTheme.typography.bodyLarge)
-
-                                // Row for the Activity Level Buttons
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                                     // Sedentary Button
                                     OutlinedButton(
@@ -604,6 +606,7 @@ fun ProfileScreen(
                                 Text("Calculate Recommended Intake")
                             }
 
+                            // CTA Buttons Row
                             Row (
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)

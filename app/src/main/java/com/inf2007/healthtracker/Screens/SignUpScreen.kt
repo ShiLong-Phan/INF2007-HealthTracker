@@ -42,7 +42,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.inf2007.healthtracker.ui.theme.Primary
 import com.inf2007.healthtracker.ui.theme.Tertiary
 import com.inf2007.healthtracker.ui.theme.Unfocused
-import com.inf2007.healthtracker.ui.theme.montserratFontFamily
 
 @Composable
 fun SignUpScreen(
@@ -77,12 +76,6 @@ fun SignUpScreen(
         )
 
         Spacer(modifier = Modifier.height(24.dp))
-
-//        TextField(
-//            value = name,
-//            onValueChange = { name = it },
-//            label = { Text("Name") },
-//        )
 
         // Name Text Field
         OutlinedTextField(
@@ -131,11 +124,6 @@ fun SignUpScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-//        TextField(
-//            value = email,
-//            onValueChange = { email = it },
-//            label = { Text("Email") },
-//        )
         if (emailErrorMessage.isNotEmpty()) {
             Text(
                 text = emailErrorMessage,
@@ -210,9 +198,7 @@ fun SignUpScreen(
             },
             shape = roundedShape,
             colors = ButtonDefaults.buttonColors(containerColor = Primary),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
+            modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
             if (isLoading) {
                 CircularProgressIndicator(color = Color.White)
@@ -223,7 +209,7 @@ fun SignUpScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Sign Up Button
+        // Sign Up Section
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center
