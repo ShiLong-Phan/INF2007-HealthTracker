@@ -122,7 +122,8 @@ fun MealPlanHistoryDetailScreen(
                         )
                     }
                 },
-                actions = { /* additional actions if needed */ }
+                actions = { /* additional actions if needed */ },
+                modifier = Modifier.padding(horizontal = 24.dp)
             )
         },
         bottomBar = { BottomNavigationBar(navController) }

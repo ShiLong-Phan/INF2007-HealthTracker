@@ -61,7 +61,7 @@ fun MealPlanHistoryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Meal Plan History") })
+            TopAppBar(title = { Text("Meal Plan History") },modifier = Modifier.padding(horizontal = 24.dp),)
         },
         bottomBar = { BottomNavigationBar(navController) }
 

@@ -12,6 +12,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -22,8 +23,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Height
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Scale
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -84,7 +90,7 @@ fun ProfileScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Profile") }) },
+        topBar = { TopAppBar(title = { Text("Profile") }, modifier = Modifier.padding(horizontal = 24.dp)) },
         bottomBar = { BottomNavigationBar(navController) }
     ) { paddingValues ->
         if (isLoading) {
@@ -100,7 +106,7 @@ fun ProfileScreen(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(24.dp),
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -342,180 +348,321 @@ fun ProfileScreen(
 
                     } else {
                         // Edit Mode
-                        TextField(
-                            value = userName,
-                            onValueChange = { userName = it },
-                            label = { Text("Name") }
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        TextField(
-                            value = userEmail,
-                            onValueChange = { userEmail = it },
-                            label = { Text("Email") }
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        TextField(
-                            value = userAge,
-                            onValueChange = { userAge = it },
-                            label = { Text("Age") }
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        TextField(
-                            value = weight,
-                            onValueChange = { weight = it },
-                            label = { Text("Weight (kg)") }
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        TextField(
-                            value = height,
-                            onValueChange = { height = it },
-                            label = { Text("Height (cm)") }
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Gender Radio Buttons
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .border(1.dp, Color.Black)
-                                .padding(8.dp)
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 0.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Text("Gender:")
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                RadioButton(
-                                    selected = userGender == "Male",
-                                    onClick = { userGender = "Male" }
-                                )
-                                Text("Male")
-                                Spacer(modifier = Modifier.width(16.dp))
-                                RadioButton(
-                                    selected = userGender == "Female",
-                                    onClick = { userGender = "Female" }
-                                )
-                                Text("Female")
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Activity Level Radio Buttons
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .border(0.5.dp, Color.Black)
-                                .padding(16.dp)
-                        ) {
-                            Text("Activity Level")
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    RadioButton(
-                                        selected = activityLevel == "Sedentary",
-                                        onClick = { activityLevel = "Sedentary" }
+                            // Name Text Field
+                            OutlinedTextField(
+                                value = userName,
+                                onValueChange = { userName = it },
+                                label = { Text("Name") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = "Name Icon"
                                     )
-                                    Text("Sedentary")
-                                }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    RadioButton(
-                                        selected = activityLevel == "Moderate",
-                                        onClick = { activityLevel = "Moderate" }
+                                },
+                                shape = roundedShape,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Primary,
+                                    unfocusedBorderColor = Unfocused
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            // Email Text Field
+                            OutlinedTextField(
+                                value = userEmail,
+                                onValueChange = { userEmail = it },
+                                label = { Text("Email") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Email,
+                                        contentDescription = "Email Icon"
                                     )
-                                    Text("Moderate")
-                                }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    RadioButton(
-                                        selected = activityLevel == "Active",
-                                        onClick = { activityLevel = "Active" }
+                                },
+                                shape = roundedShape,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Primary,
+                                    unfocusedBorderColor = Unfocused
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            // Age Text Field
+                            OutlinedTextField(
+                                value = userAge,
+                                onValueChange = { userAge = it },
+                                label = { Text("Age") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Event,
+                                        contentDescription = "Age Icon"
                                     )
-                                    Text("Active")
+                                },
+                                shape = roundedShape,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Primary,
+                                    unfocusedBorderColor = Unfocused
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                // Dietary Preference Column
+                                Column(
+                                    modifier = Modifier.weight(1f) // Makes this column take up half of the row's width
+                                ) {
+                                    // Dietary Preference Text Field
+                                    OutlinedTextField(
+                                        value = dietaryPreference,
+                                        onValueChange = { dietaryPreference = it },
+                                        label = { Text("Dietary Preference") }, // Label without the guide text
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Default.Restaurant,
+                                                contentDescription = "Dietary Preference Icon"
+                                            )
+                                        },
+                                        shape = roundedShape,
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = Primary,
+                                            unfocusedBorderColor = Unfocused
+                                        ),
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+
+                                    // Guide Text
+                                    Text(
+                                        text = "Vegan, Keto, etc.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.Black,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
+
+                                // Desired Calorie Intake Column
+                                Column(
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    // Desired Calorie Intake Text Field
+                                    OutlinedTextField(
+                                        value = calorieIntake,
+                                        onValueChange = { calorieIntake = it },
+                                        label = { Text("Calorie Intake (kcal)") },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                                                contentDescription = "Calorie Intake Icon"
+                                            )
+                                        },
+                                        shape = roundedShape,
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = Primary,
+                                            unfocusedBorderColor = Unfocused
+                                        ),
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
                                 }
                             }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
 
-                        TextField(
-                            value = dietaryPreference,
-                            onValueChange = { dietaryPreference = it },
-                            label = { Text("Dietary Preference (Vegan, Keto, etc.)") }
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        TextField(
-                            value = calorieIntake,
-                            onValueChange = { calorieIntake = it },
-                            label = { Text("Desired Calorie Intake (kcal)") }
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = {
-                                val weightValue = weight.toDoubleOrNull() ?: 0.0
-                                val heightValue = height.toDoubleOrNull() ?: 0.0
-                                val ageValue = userAge.toIntOrNull() ?: 0
-                                val bmr =
-                                    calculateBMR(weightValue, heightValue, ageValue, userGender)
-                                calorieIntake = bmr.toInt().toString()
-                                Toast.makeText(
-                                    context,
-                                    "Recommended Calorie Intake: $calorieIntake kcal",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        ) {
-                            Text("Calculate Recommended Intake")
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Button(
-                            onClick = {
-                                isLoading = true
-
-                                val updates: MutableMap<String, Any> = mutableMapOf(
-                                    "name" to userName,
-                                    "age" to userAge,
-                                    "gender" to userGender,
-                                    "email" to userEmail,
-                                    "gender" to userGender,
-                                    "activity_level" to activityLevel,
-                                    "dietary_preference" to dietaryPreference
+                            // Weight and Height Row
+                            Row (
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ){
+                                OutlinedTextField(
+                                    value = weight,
+                                    onValueChange = { weight = it },
+                                    label = { Text("Weight (kg)") },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Scale,
+                                            contentDescription = "Age Icon"
+                                        )
+                                    },
+                                    shape = roundedShape,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Primary,
+                                        unfocusedBorderColor = Unfocused
+                                    ),
+                                    modifier = Modifier.weight(1f)
                                 )
 
-                                // Ensure weight and height are stored as Integers only if valid
-                                weight.toIntOrNull()?.let { updates["weight"] = it }
-                                height.toIntOrNull()?.let { updates["height"] = it }
-                                calorieIntake.toIntOrNull()?.let { updates["calorie_intake"] = it }
+                                OutlinedTextField(
+                                    value = height,
+                                    onValueChange = { height = it },
+                                    label = { Text("Height (cm)") },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Height,
+                                            contentDescription = "Age Icon"
+                                        )
+                                    },
+                                    shape = roundedShape,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Primary,
+                                        unfocusedBorderColor = Unfocused
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
 
-                                FirebaseFirestore.getInstance().collection("users")
-                                    .document(user!!.uid)
-                                    .update(updates)
-                                    .addOnSuccessListener {
-                                        isLoading = false
-                                        Toast.makeText(
-                                            context,
-                                            "Profile updated!",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                        isEditing = false // Exit Edit Mode
+                            // Gender Radio Buttons
+                            Column(
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
+                                    Text("Gender", style = MaterialTheme.typography.bodyLarge)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    RadioButton(
+                                        selected = userGender == "Male",
+                                        onClick = { userGender = "Male" }
+                                    )
+                                    Text("Male")
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    RadioButton(
+                                        selected = userGender == "Female",
+                                        onClick = { userGender = "Female" }
+                                    )
+                                    Text("Female")
+                                }
+                            }
+
+                            // Activity Level Radio Buttons
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(0.dp)
+                            ) {
+                                // Activity Level Label
+                                Text("Activity Level", style = MaterialTheme.typography.bodyLarge)
+
+                                // Row for the Activity Level Buttons
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                                    // Sedentary Button
+                                    OutlinedButton(
+                                        onClick = { activityLevel = "Sedentary" },
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.background,
+                                            contentColor = if (activityLevel == "Sedentary") Primary else Unfocused
+                                        ),
+                                        border = BorderStroke(1.dp, if (activityLevel == "Sedentary") Primary else Unfocused),
+                                        modifier = Modifier.padding(end = 10.dp)
+                                    ) {
+                                        Text("Sedentary")
                                     }
-                                    .addOnFailureListener { exception ->
-                                        isLoading = false
-                                        errorMessage = exception.message ?: "Update failed"
+
+                                    // Moderate Button
+                                    OutlinedButton(
+                                        onClick = { activityLevel = "Moderate" },
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.background,
+                                            contentColor = if (activityLevel == "Moderate") Primary else Unfocused
+                                        ),
+                                        border = BorderStroke(1.dp, if (activityLevel == "Moderate") Primary else Unfocused),
+                                        modifier = Modifier.padding(end = 10.dp)
+                                    ) {
+                                        Text("Moderate")
                                     }
+
+                                    // Active Button
+                                    OutlinedButton(
+                                        onClick = { activityLevel = "Active" },
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.background,
+                                            contentColor = if (activityLevel == "Active") Primary else Unfocused
+                                        ),
+                                        border = BorderStroke(1.dp, if (activityLevel == "Active") Primary else Unfocused)
+                                    ) {
+                                        Text("Active")
+                                    }
+                                }
                             }
-                        ) {
-                            Text("Save Changes")
-                        }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                            // Calculate Recommended Intake Button
+                            Button(
+                                onClick = {
+                                    val weightValue = weight.toDoubleOrNull() ?: 0.0
+                                    val heightValue = height.toDoubleOrNull() ?: 0.0
+                                    val ageValue = userAge.toIntOrNull() ?: 0
+                                    val bmr =
+                                        calculateBMR(weightValue, heightValue, ageValue, userGender)
+                                    calorieIntake = bmr.toInt().toString()
+                                    Toast.makeText(
+                                        context,
+                                        "Recommended Calorie Intake: $calorieIntake kcal",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                },
+                                shape = roundedShape,
+                                colors = ButtonDefaults.buttonColors(containerColor = Tertiary),
+                                modifier = Modifier.fillMaxWidth().height(56.dp)
+                            ) {
+                                Text("Calculate Recommended Intake")
+                            }
 
-                        Button(
-                            onClick = { isEditing = false } // Cancel Editing
-                        ) {
-                            Text("Cancel")
+                            Row (
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ){
+                                // Cancel Changes Button
+                                Button(
+                                    onClick = { isEditing = false },
+                                    shape = roundedShape,
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.background, contentColor = Primary, ),
+                                    border = BorderStroke(1.dp, Primary),
+                                    modifier = Modifier.height(56.dp).weight(1f)
+                                ) {
+                                    Text("Cancel")
+                                }
+
+                                // Save Changes Button
+                                Button(
+                                    onClick = {
+                                        isLoading = true
+
+                                        val updates: MutableMap<String, Any> = mutableMapOf(
+                                            "name" to userName,
+                                            "age" to userAge,
+                                            "gender" to userGender,
+                                            "email" to userEmail,
+                                            "gender" to userGender,
+                                            "activity_level" to activityLevel,
+                                            "dietary_preference" to dietaryPreference
+                                        )
+
+                                        // Ensure weight and height are stored as Integers only if valid
+                                        weight.toIntOrNull()?.let { updates["weight"] = it }
+                                        height.toIntOrNull()?.let { updates["height"] = it }
+                                        calorieIntake.toIntOrNull()?.let { updates["calorie_intake"] = it }
+
+                                        FirebaseFirestore.getInstance().collection("users")
+                                            .document(user!!.uid)
+                                            .update(updates)
+                                            .addOnSuccessListener {
+                                                isLoading = false
+                                                Toast.makeText(
+                                                    context,
+                                                    "Profile updated!",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                                isEditing = false // Exit Edit Mode
+                                            }
+                                            .addOnFailureListener { exception ->
+                                                isLoading = false
+                                                errorMessage = exception.message ?: "Update failed"
+                                            }
+                                    },
+                                    shape = roundedShape,
+                                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                                    modifier = Modifier.height(56.dp).weight(1f)
+                                ) {
+                                    Text("Save Changes")
+                                }
+                            }
                         }
                     }
                 }

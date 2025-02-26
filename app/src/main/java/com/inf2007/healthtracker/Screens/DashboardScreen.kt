@@ -162,6 +162,7 @@ fun DashboardScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Dashboard", modifier = Modifier.fillMaxWidth()) },
+                modifier = Modifier.padding(horizontal = 24.dp),
                 actions = {
                     IconButton(onClick = { navController.navigate("history_screen") }) {
                         Icon(

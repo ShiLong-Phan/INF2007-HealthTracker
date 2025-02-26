@@ -46,7 +46,7 @@ fun HistoryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("History") })
+            TopAppBar(title = { Text("History") }, modifier = Modifier.padding(horizontal = 24.dp))
         },
         bottomBar = { BottomNavigationBar(navController) },
         containerColor = MaterialTheme.colorScheme.background,
@@ -118,7 +118,7 @@ fun HistoryScreen(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(16.dp),
+                    .padding(horizontal = 40.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 item {

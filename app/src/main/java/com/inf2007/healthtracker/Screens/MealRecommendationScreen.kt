@@ -142,6 +142,7 @@ fun MealRecommendationScreen(
         topBar = {
             Column {
                 TopAppBar(title = { Text("AI-Powered Meal Plan") },
+                    modifier = Modifier.padding(horizontal = 24.dp),
                     actions = {
                         IconButton(onClick = { navController.navigate("meal_plan_history_screen") }) {
                             Icon(
