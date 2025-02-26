@@ -274,7 +274,7 @@ fun DashboardScreen(
             if (foodEntries.isEmpty()) {
                 Text("No entries yet!", style = MaterialTheme.typography.bodyLarge)
             } else {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 24.dp)) {
                     foodEntries.forEach { entry ->
                         FoodEntryCard(entry)
                     }
@@ -326,7 +326,7 @@ fun FoodEntryCard(entry: FoodEntry) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        colors = CardDefaults.cardColors(containerColor = Secondary, contentColor = Color.White)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

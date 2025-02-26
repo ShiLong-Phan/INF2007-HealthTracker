@@ -4,11 +4,17 @@ import android.graphics.Bitmap
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.Fastfood
+import androidx.compose.material.icons.filled.Height
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +28,8 @@ import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.inf2007.healthtracker.BuildConfig
+import com.inf2007.healthtracker.ui.theme.Primary
+import com.inf2007.healthtracker.ui.theme.Unfocused
 import com.inf2007.healthtracker.utilities.BottomNavigationBar
 import com.inf2007.healthtracker.utilities.GeminiService
 import kotlinx.coroutines.launch
@@ -31,13 +39,16 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CaptureFoodScreen(navController: NavController) {
-    var foodName by mutableStateOf("")
-    var imageBitmap by mutableStateOf<Bitmap?>(null)
-    var recognizedFood by mutableStateOf<Pair<String, Int>?>(null)
-    var caloricValue by mutableStateOf("")
-    var errorMessage by mutableStateOf("")
+    var foodName by remember { mutableStateOf("") }
+    var imageBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var recognizedFood by remember { mutableStateOf<Pair<String, Int>?>(null) }
+    var caloricValue by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf("") }
+
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    val roundedShape = MaterialTheme.shapes.small
 
     // Initialize GeminiService
     val geminiService = remember { GeminiService(BuildConfig.geminiApiKey) }
@@ -65,7 +76,6 @@ fun CaptureFoodScreen(navController: NavController) {
             }
         }
     }
-
 
     // Function to save food data to Firestore
     fun saveFoodData(foodName: String, caloricValue: Int) {
@@ -96,7 +106,6 @@ fun CaptureFoodScreen(navController: NavController) {
         }
     }
 
-
     // Camera launcher
     val cameraLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
@@ -106,7 +115,7 @@ fun CaptureFoodScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "Capture Food") }
+                title = { Text(text = "Capture Food") }, modifier = Modifier.padding(horizontal = 24.dp)
             )
         },
         bottomBar = { BottomNavigationBar(navController) }
@@ -143,10 +152,23 @@ fun CaptureFoodScreen(navController: NavController) {
                 )
             }
 
-            TextField(
+            // Food Name Text Field
+            OutlinedTextField(
                 value = foodName,
                 onValueChange = { foodName = it },
-                label = { Text("Food Name*") }
+                label = { Text("Food Name") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Fastfood,
+                        contentDescription = "Food Icon"
+                    )
+                },
+                shape = roundedShape,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Primary,
+                    unfocusedBorderColor = Unfocused
+                ),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
             )
 
             // Recognize food button
@@ -154,9 +176,10 @@ fun CaptureFoodScreen(navController: NavController) {
                 onClick = {
                     recognizeFood(imageBitmap, foodName)
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 32.dp)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.background, contentColor = Primary, ),
+                border = BorderStroke(1.dp, Primary),
+                shape = roundedShape,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(56.dp)
             ) {
                 Text("Calculate Estimated Caloric Value of: $foodName")
             }
@@ -167,26 +190,51 @@ fun CaptureFoodScreen(navController: NavController) {
                 Log.i("CaptureFoodScreen", "Recognized food: ${it}")
                 Text(
                     "Recognized Food: Based on the image and typical ingredients of $foodName",
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 24.dp)
                 )
-                Text(
-                    "Estimated Calories in kcal:"
-                )
-                TextField(
-                    value = caloricValue,
-                    onValueChange = { caloricValue = it },
-                    label = { Text("Caloric Value") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    // Text
+                    Text(
+                        "Estimated Calories in kcal:",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+
+                    // Caloric Value Text Field
+                    OutlinedTextField(
+                        value = caloricValue,
+                        onValueChange = { caloricValue = it },
+                        label = { Text("Caloric Value") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                                contentDescription = "Caloric Value Icon"
+                            )
+                        },
+                        shape = roundedShape,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Primary,
+                            unfocusedBorderColor = Unfocused
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
 
             // Save food data button
             Button(
                 onClick = { recognizedFood?.let { saveFoodData(foodName, it.second) } },
                 enabled = foodName.isNotEmpty(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 32.dp)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                shape = roundedShape,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 24.dp).height(56.dp)
             ) {
                 Text("Save Food Data")
             }

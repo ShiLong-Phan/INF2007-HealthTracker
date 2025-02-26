@@ -24,12 +24,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.inf2007.healthtracker.ui.theme.Secondary
 import com.inf2007.healthtracker.utilities.BottomNavigationBar
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -122,7 +124,7 @@ fun HistoryScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 item {
-                    Text("Food Entries History", style = MaterialTheme.typography.headlineSmall)
+                    Text("Food Entries History", style = MaterialTheme.typography.titleLarge)
                 }
                 if (foodEntries.isEmpty()) {
                     item {
@@ -135,7 +137,7 @@ fun HistoryScreen(
                 }
                 item {
                     Spacer(modifier = Modifier.height(24.dp))
-                    Text("Steps History", style = MaterialTheme.typography.headlineSmall)
+                    Text("Steps History", style = MaterialTheme.typography.titleLarge)
                 }
                 if (stepsHistory.isEmpty()) {
                     item {
@@ -159,12 +161,10 @@ fun FoodEntryHistoryCard(entry: FoodEntry2) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
+        shape = MaterialTheme.shapes.small,
+        colors = CardDefaults.cardColors(containerColor = Secondary, contentColor = Color.White)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Food: ${entry.foodName}", style = MaterialTheme.typography.titleMedium)
             Text("Calories: ${entry.caloricValue}", style = MaterialTheme.typography.bodyMedium)
             Text("Date: $dateString", style = MaterialTheme.typography.bodySmall)
@@ -180,12 +180,10 @@ fun StepsHistoryCard(entry: StepsEntry) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        )
+        shape = MaterialTheme.shapes.small,
+        colors = CardDefaults.cardColors(containerColor = Secondary, contentColor = Color.White)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Steps: ${entry.steps}", style = MaterialTheme.typography.titleMedium)
             Text("Date: $dateString", style = MaterialTheme.typography.bodySmall)
         }
