@@ -1,6 +1,7 @@
 package com.inf2007.healthtracker.Screens
 
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -42,6 +43,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.remember
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.font.FontWeight
+import com.inf2007.healthtracker.BuildConfig
+import com.inf2007.healthtracker.utilities.GeminiService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import org.json.JSONObject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,6 +67,7 @@ fun DashboardScreen(
     var hydration by remember { mutableStateOf(0) }
     var weight by remember { mutableStateOf(0) }
     var healthTips by remember { mutableStateOf("Fetching AI health tips...") }
+    var isLoading by remember { mutableStateOf(true) }
     var weeklySteps by remember { mutableStateOf(listOf(1000, 1000, 1000, 1000, 1000, 1000, 1000)) }
 
     val dailyStepGoal = 10000
@@ -73,6 +86,8 @@ fun DashboardScreen(
     val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
     val formattedDate = dateFormat.format(Date())
     val stepsRef = firestore.collection("steps").document("${user?.uid}_${formattedDate}")
+
+    val geminiService = remember { GeminiService(BuildConfig.geminiApiKey) }
 
     // Fetch user data from Firestore
     LaunchedEffect(Unit) {
@@ -154,7 +169,8 @@ fun DashboardScreen(
     // Fetch AI health tips
     LaunchedEffect(Unit) {
         coroutineScope.launch {
-            healthTips = fetchAIHealthTips(steps, calorieIntake, hydration, weight)
+            healthTips = geminiService.fetchHealthTips()
+            isLoading = false
         }
     }
 
@@ -285,22 +301,24 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // AI Health Tips
-            Text("AI Health Tips", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background, contentColor = Color.Black),
-                shape = MaterialTheme.shapes.small,
-            ) {
-                Text(
-                    text = healthTips,
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center
-                )
-            }
+            AIHealthTipsCard(healthTips = healthTips, isLoading = isLoading)
 
-            Spacer(modifier = Modifier.height(2.dp))
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 🔹 Refresh Button
+//            Button(
+//                onClick = {
+//                    isLoading = true
+//                    coroutineScope.launch {
+//                        healthTips = geminiService.fetchHealthTips()
+//                        isLoading = false
+//                    }
+//                },
+//                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
+//            ) {
+//                Text("Refresh AI Health Tips")
+//            }
         }
     }
 }
@@ -542,10 +560,51 @@ fun CaptureFoodBtn(navController: NavController) {
     }
 }
 
-/**
- * Simulated AI-generated health advice function.
- */
-suspend fun fetchAIHealthTips(steps: Int, calorieIntake: Int, hydration: Int, weight: Int): String {
-    return "Based on your activity level and nutrition, consider increasing your water intake by 500ml " +
-            "to stay optimally hydrated. Aim for 10,000 steps daily for better cardiovascular health."
+@Composable
+fun AIHealthTipsCard(healthTips: String, isLoading: Boolean) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            "AI Health Tips",
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(8.dp, shape = RoundedCornerShape(16.dp)), // ✅ Add shadow effect
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center // ✅ Centers loading indicator
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator()
+                } else {
+                    this@Card.AnimatedVisibility(visible = !isLoading, enter = fadeIn()) {
+                        Text(
+                            text = healthTips,
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                            textAlign = TextAlign.Center,
+                            color = Color.Black
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
 }
+
+

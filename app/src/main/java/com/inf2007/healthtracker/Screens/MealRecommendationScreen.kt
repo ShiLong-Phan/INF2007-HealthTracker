@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import com.inf2007.healthtracker.ui.theme.Primary
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MealRecommendationScreen(

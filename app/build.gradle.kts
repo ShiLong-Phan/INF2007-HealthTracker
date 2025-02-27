@@ -78,5 +78,11 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.3.1")
     implementation("androidx.compose.ui:ui-text-google-fonts:<latest_version>")
 
+    implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
+
+    implementation("com.squareup.okhttp3:okhttp:4.11.0") // Ensure you have the latest version
+
+
+
 
 }

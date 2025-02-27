@@ -84,4 +84,25 @@ class GeminiService(private val apiKey: String) {
             listOf("Error generating caloric value: ${e.message}")
         }
     }
+
+
+    // 🔹 Predefined prompt for AI-generated health tips
+    suspend fun fetchHealthTips(): String {
+        return try {
+            val prompt = """
+               Give me 1 actionable health tips that improve daily well-being. 
+               Keep them short and practical.
+           """.trimIndent()
+
+            val response = generativeModel.generateContent(
+                Content(parts = listOf(TextPart(prompt)))
+            )
+            response.text ?: "No health tips found."
+            } catch (e: Exception) {
+                "Error fetching health tips: ${e.message}. Please try again!"
+            }
+        }
+
+
+
 }
