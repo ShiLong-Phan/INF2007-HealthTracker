@@ -162,7 +162,7 @@ fun MealPlanHistoryDetailScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Meal Plan:", style = MaterialTheme.typography.titleMedium)
+                            Text("Meal Plan", style = MaterialTheme.typography.titleMedium)
                             Button(
                                 onClick = {
                                     saveMeals(mealInputState, history) {
@@ -205,7 +205,7 @@ fun MealPlanHistoryDetailScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Restaurant List Section with Images
-                        Text("Nearby Restaurants:", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 40.dp))
+                        Text("Nearby Restaurants", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 40.dp))
                         LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 40.dp)) {
                             items(history.restaurants) { restaurant ->
                                 RestaurantItem(restaurant)

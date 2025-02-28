@@ -179,7 +179,7 @@ fun MealRecommendationScreen(
             Column(modifier = Modifier
                 .padding(paddingValues)
                 .padding(horizontal = 40.dp, vertical = 16.dp)) {
-                Text("Meal Plan", style = MaterialTheme.typography.titleLarge)
+                Text("Meal Plan", style = MaterialTheme.typography.titleMedium)
                 LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp).weight(1f)) {
                     items(aiMealPlan) { meal ->
                         Text("- $meal", style = MaterialTheme.typography.bodyMedium)
@@ -188,7 +188,7 @@ fun MealRecommendationScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text("Nearby Restaurants", style = MaterialTheme.typography.titleLarge)
+                Text("Nearby Restaurants", style = MaterialTheme.typography.titleMedium)
                 LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp).weight(1f)) {
                     items(restaurantRecommendations) { business ->
                         RestaurantItem(business)
