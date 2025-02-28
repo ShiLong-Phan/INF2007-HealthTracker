@@ -93,7 +93,7 @@ fun DashboardScreen(
     var user by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
     var stepCount by remember { mutableStateOf(0) }
     val firestore = FirebaseFirestore.getInstance()
-    val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
     val formattedDate = dateFormat.format(Date())
     val stepsRef = firestore.collection("steps").document("${user?.uid}_${formattedDate}")
 

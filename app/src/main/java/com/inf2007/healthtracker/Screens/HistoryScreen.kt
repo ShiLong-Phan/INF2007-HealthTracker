@@ -67,7 +67,7 @@ fun HistoryScreen(
     navController: NavController,
     modifier: Modifier = Modifier,
 ) {
-    var foodEntries by remember { mutableStateOf<List<FoodEntry2>>(emptyList()) }
+    var foodEntriesHistory by remember { mutableStateOf<List<FoodEntry2>>(emptyList()) }
     var stepsHistory by remember { mutableStateOf<List<StepsEntry>>(emptyList()) }
     var filteredFoodEntries by remember { mutableStateOf<List<FoodEntry2>>(emptyList()) }
     var filteredStepsHistory by remember { mutableStateOf<List<StepsEntry>>(emptyList()) }
@@ -77,7 +77,8 @@ fun HistoryScreen(
     val currentUser = FirebaseAuth.getInstance().currentUser
 
     // Date formatter to use for displaying and filtering dates
-    val dateFormatter = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault())
+    //val dateFormatter = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault())
+    val dateFormatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
 
     val totalCalories = filteredFoodEntries.sumOf { it.caloricValue }
     val totalSteps = filteredStepsHistory.sumOf { it.steps }
@@ -87,14 +88,14 @@ fun HistoryScreen(
             // Fetch Food Entries from Firestore
             FirebaseFirestore.getInstance().collection("foodEntries")
                 .whereEqualTo("userId", it.uid)
-                .orderBy("timestamp", Query.Direction.DESCENDING)
+                //.orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         Log.e("HistoryScreen", "Error fetching food entries: ${error.message}")
                         return@addSnapshotListener
                     }
                     snapshot?.let { snap ->
-                        foodEntries = snap.documents.mapNotNull { doc ->
+                        foodEntriesHistory = snap.documents.mapNotNull { doc ->
                             try {
                                 doc.toObject(FoodEntry2::class.java)?.copy(id = doc.id)
                             } catch (e: Exception) {
@@ -102,14 +103,14 @@ fun HistoryScreen(
                                 null
                             }
                         }
-                        filteredFoodEntries = foodEntries // Initially set filtered list as the entire list
+                        filteredFoodEntries = foodEntriesHistory // Initially set filtered list as the entire list
                     }
                 }
 
             // Fetch Steps History from Firestore
             FirebaseFirestore.getInstance().collection("steps")
                 .whereEqualTo("userId", it.uid)
-                .orderBy("timestamp", Query.Direction.DESCENDING)
+                //.orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         Log.e("HistoryScreen", "Error fetching steps entries: ${error.message}")
@@ -133,13 +134,13 @@ fun HistoryScreen(
     // Function to filter the history entries strictly by date
     fun filterHistoryEntries(query: String) {
         if (query.isEmpty()) {
-            filteredFoodEntries = foodEntries
+            filteredFoodEntries = foodEntriesHistory
             filteredStepsHistory = stepsHistory
         } else {
             val lowerCaseQuery = query.lowercase()
 
             // Filter food entries by formatted date string
-            filteredFoodEntries = foodEntries.filter {
+            filteredFoodEntries = foodEntriesHistory.filter {
                 val formattedDate = it.timestamp?.toDate()?.let { dateFormatter.format(it) }
                 formattedDate?.lowercase()?.contains(lowerCaseQuery) == true
             }
@@ -189,9 +190,9 @@ fun HistoryScreen(
                     )
                 }
 
-                if (foodEntries.isEmpty() && stepsHistory.isEmpty()) {
+                if (foodEntriesHistory.isEmpty() && stepsHistory.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No history found.")
+                        CircularProgressIndicator()
                     }
                 } else if (filteredFoodEntries.isEmpty() && filteredStepsHistory.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -199,8 +200,8 @@ fun HistoryScreen(
                     }
                 } else {
                     // Calculate the totals from the filtered lists
-                    val totalCalories = filteredFoodEntries.sumOf { it.caloricValue }
-                    val totalSteps = filteredStepsHistory.sumOf { it.steps }
+                    val totalCaloriesfiltered = filteredFoodEntries.sumOf { it.caloricValue }
+                    val totalStepsfiltered = filteredStepsHistory.sumOf { it.steps }
 
                     LazyColumn(
                         modifier = Modifier
@@ -210,14 +211,14 @@ fun HistoryScreen(
                     ) {
                         // Show the totals at the top of the list
                         item {
-                            TotalCard(totalCalories, totalSteps)
+                            TotalCard(totalCaloriesfiltered, totalStepsfiltered)
 
                         }
 
                         item {
                             Text("Food Entries History", style = MaterialTheme.typography.titleLarge)
                         }
-                        if (filteredFoodEntries.isEmpty()) {
+                        if (foodEntriesHistory.isEmpty()) {
                             item {
                                 Text("No food entries found.", style = MaterialTheme.typography.bodyLarge)
                             }
@@ -330,7 +331,7 @@ fun HistoryScreen(
                                         .document(item.id)
                                         .delete()
                                         .addOnSuccessListener {
-                                            foodEntries = foodEntries.filter { it.id != item.id }
+                                            foodEntriesHistory = foodEntriesHistory.filter { it.id != item.id }
                                             filteredFoodEntries = filteredFoodEntries.filter { it.id != item.id }
                                         }
                                 } else if (item is StepsEntry) {
