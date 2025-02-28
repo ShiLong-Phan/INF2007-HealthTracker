@@ -20,13 +20,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.BottomNavigation
 import androidx.compose.material.BottomNavigationItem
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Height
+import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Scale
@@ -57,6 +60,8 @@ fun ProfileScreen(
     var activityLevel by remember { mutableStateOf("Sedentary") }
     var dietaryPreference by remember { mutableStateOf("") }
     var calorieIntake by remember { mutableStateOf("") }
+    var stepsGoal by remember { mutableStateOf("") }
+    var hydrationGoal by remember { mutableStateOf("") }
     var isEditing by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
@@ -80,6 +85,8 @@ fun ProfileScreen(
                     activityLevel = document.getString("activity_level") ?: "Sedentary"
                     dietaryPreference = document.getString("dietary_preference") ?: "None"
                     calorieIntake = document.get("calorie_intake")?.toString() ?: ""
+                    stepsGoal = document.get("steps_goal")?.toString() ?: ""
+                    hydrationGoal = document.get("hydration_goal")?.toString() ?: ""
                     isLoading = false
                 }
                 .addOnFailureListener { exception ->
@@ -321,6 +328,60 @@ fun ProfileScreen(
                                 )
                             }
 
+                            //Steps goal
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.DirectionsWalk,
+                                    contentDescription = "Steps Goal Icon",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                Text(
+                                    text = "Steps Goal",
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                                )
+
+                                Spacer(modifier = Modifier.weight(1f))  // Pushes the value to the right
+
+                                Text(
+                                    text = "$stepsGoal steps",
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+
+                            //Hydration Goal
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocalDrink,
+                                    contentDescription = "Hydration Icon",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                Text(
+                                    text = "Hydration Goal",
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                                )
+
+                                Spacer(modifier = Modifier.weight(1f))  // Pushes the value to the right
+
+                                Text(
+                                    text = "$hydrationGoal ml",
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+
                             // Logout Row
                             Row(
                                 modifier = Modifier
@@ -470,6 +531,60 @@ fun ProfileScreen(
                                         ),
                                         modifier = Modifier.fillMaxWidth()
                                     )
+                                }
+                            }
+
+                            //Steps and Hydration Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.weight(1f) // Makes this column take up half of the row's width
+                                ) {
+
+                                    OutlinedTextField(
+                                        value = stepsGoal,
+                                        onValueChange = { stepsGoal = it },
+                                        label = { Text("Steps") }, // Label without the guide text
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.DirectionsWalk,
+                                                contentDescription = "Steps Goal Icon"
+                                            )
+                                        },
+                                        shape = roundedShape,
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = Primary,
+                                            unfocusedBorderColor = Unfocused
+                                        ),
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+
+
+                                }
+
+                                Column(
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    OutlinedTextField(
+                                        value = hydrationGoal,
+                                        onValueChange = { hydrationGoal = it },
+                                        label = { Text("Hydration") }, // Label without the guide text
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Default.LocalDrink,
+                                                contentDescription = "Hydration Icon"
+                                            )
+                                        },
+                                        shape = roundedShape,
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = Primary,
+                                            unfocusedBorderColor = Unfocused
+                                        ),
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+
                                 }
                             }
 
@@ -634,13 +749,17 @@ fun ProfileScreen(
                                             "email" to userEmail,
                                             "gender" to userGender,
                                             "activity_level" to activityLevel,
-                                            "dietary_preference" to dietaryPreference
+                                            "dietary_preference" to dietaryPreference,
+                                            "steps_goal" to stepsGoal,
+                                            "hydration_goal" to hydrationGoal
                                         )
 
                                         // Ensure weight and height are stored as Integers only if valid
                                         weight.toIntOrNull()?.let { updates["weight"] = it }
                                         height.toIntOrNull()?.let { updates["height"] = it }
                                         calorieIntake.toIntOrNull()?.let { updates["calorie_intake"] = it }
+                                        stepsGoal.toIntOrNull()?.let { updates["steps_goal"] = it }
+                                        hydrationGoal.toIntOrNull()?.let { updates["hydration_goal"] = it }
 
                                         FirebaseFirestore.getInstance().collection("users")
                                             .document(user!!.uid)
