@@ -13,6 +13,7 @@ import androidx.compose.material.DismissDirection
 import androidx.compose.material.DismissValue
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.SwipeToDismiss
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.rememberDismissState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,10 +41,15 @@ fun MealPlanHistoryScreen(
     modifier: Modifier = Modifier
 ) {
     var mealHistory by remember { mutableStateOf<List<MealHistory>>(emptyList()) }
+    var filteredMealHistory by remember { mutableStateOf<List<MealHistory>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
     // Track the item pending deletion confirmation.
     var pendingDeleteItem by remember { mutableStateOf<MealHistory?>(null) }
+
+    // For searching
+    var searchQuery by remember { mutableStateOf("") }
+    var isSearchActive by remember { mutableStateOf(false) } // Track search state
 
     val user = FirebaseAuth.getInstance().currentUser
     val firestore = FirebaseFirestore.getInstance()
@@ -59,6 +65,8 @@ fun MealPlanHistoryScreen(
                         // Map Firestore document into MealHistory and capture the document ID.
                         doc.toObject(MealHistory::class.java)?.copy(documentId = doc.id)
                     }
+                    // Initially set the filtered list as the entire list
+                    filteredMealHistory = mealHistory
                 }
                 .addOnFailureListener { exception ->
                     errorMessage = "Failed to retrieve meal history: ${exception.message}"
@@ -67,9 +75,30 @@ fun MealPlanHistoryScreen(
         }
     }
 
+    // Function to filter the meal history by date
+    fun filterMealHistory(query: String) {
+        if (query.isEmpty()) {
+            filteredMealHistory = mealHistory
+        } else {
+            val lowerCaseQuery = query.lowercase()
+            filteredMealHistory = mealHistory.filter {
+                val formattedDate = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(it.date).lowercase()
+                formattedDate.contains(lowerCaseQuery)
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Meal Plan History") },modifier = Modifier.padding(horizontal = 24.dp),)
+            TopAppBar(
+                title = { Text("Meal Plan History") },
+                modifier = Modifier.padding(horizontal = 24.dp),
+                actions = {
+                    IconButton(onClick = { isSearchActive = !isSearchActive }) {
+                        Icon(Icons.Filled.Search, contentDescription = "Search")
+                    }
+                }
+            )
         },
         bottomBar = { BottomNavigationBar(navController) }
 
@@ -77,6 +106,23 @@ fun MealPlanHistoryScreen(
         Column(modifier = modifier
             .fillMaxSize()
             .padding(paddingValues)) {
+
+            // Search Bar
+            if (isSearchActive) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { query ->
+                        searchQuery = query
+                        filterMealHistory(query)
+                    },
+                    label = { Text("Search by Date") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    singleLine = true
+                )
+            }
+
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -85,7 +131,7 @@ fun MealPlanHistoryScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
                 }
-            } else if (mealHistory.isEmpty()) {
+            } else if (filteredMealHistory.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No meal plan found.")
                 }
@@ -97,7 +143,7 @@ fun MealPlanHistoryScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(
-                        items = mealHistory,
+                        items = filteredMealHistory,
                         key = { history -> history.documentId } // Use documentId as the unique key.
                     ) { history ->
                         // Each item has its own dismiss state.
@@ -129,7 +175,7 @@ fun MealPlanHistoryScreen(
                                         .padding(8.dp),
                                     contentAlignment = Alignment.CenterEnd,
 
-                                ) {
+                                    ) {
                                     Icon(
                                         imageVector = Icons.Default.Delete,
                                         contentDescription = "Delete",
@@ -161,6 +207,9 @@ fun MealPlanHistoryScreen(
                                         // Remove from local state on successful deletion.
                                         mealHistory =
                                             mealHistory.filter { it.documentId != item.documentId }
+                                        // Also update the filtered list.
+                                        filteredMealHistory =
+                                            filteredMealHistory.filter { it.documentId != item.documentId }
                                     }
                                     .addOnFailureListener { exception ->
                                         errorMessage = "Deletion failed: ${exception.message}"
@@ -181,6 +230,7 @@ fun MealPlanHistoryScreen(
         }
     }
 }
+
 
 @Composable
 fun MealHistoryItem(navController: NavController, history: MealHistory) {

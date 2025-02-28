@@ -1,7 +1,9 @@
 package com.inf2007.healthtracker.Screens
 
 import android.util.Log
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,11 +12,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.AlertDialog
+import androidx.compose.material.DismissDirection
+import androidx.compose.material.DismissValue
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.SwipeToDismiss
+import androidx.compose.material.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.rememberDismissState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -23,7 +40,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -36,7 +55,7 @@ import com.inf2007.healthtracker.utilities.BottomNavigationBar
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun HistoryScreen(
     navController: NavController,
@@ -44,119 +63,282 @@ fun HistoryScreen(
 ) {
     var foodEntries by remember { mutableStateOf<List<FoodEntry2>>(emptyList()) }
     var stepsHistory by remember { mutableStateOf<List<StepsEntry>>(emptyList()) }
+    var filteredFoodEntries by remember { mutableStateOf<List<FoodEntry2>>(emptyList()) }
+    var filteredStepsHistory by remember { mutableStateOf<List<StepsEntry>>(emptyList()) }
+    var searchQuery by remember { mutableStateOf("") }
+    var isSearchActive by remember { mutableStateOf(false) } // Track search state
+    var pendingDeleteItem by remember { mutableStateOf<Any?>(null) } // For tracking the item to delete
     val currentUser = FirebaseAuth.getInstance().currentUser
+
+    // Date formatter to use for displaying and filtering dates
+    val dateFormatter = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault())
+
+    LaunchedEffect(Unit) {
+        currentUser?.let {
+            // Fetch Food Entries from Firestore
+            FirebaseFirestore.getInstance().collection("foodEntries")
+                .whereEqualTo("userId", it.uid)
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.e("HistoryScreen", "Error fetching food entries: ${error.message}")
+                        return@addSnapshotListener
+                    }
+                    snapshot?.let { snap ->
+                        foodEntries = snap.documents.mapNotNull { doc ->
+                            try {
+                                doc.toObject(FoodEntry2::class.java)?.copy(id = doc.id)
+                            } catch (e: Exception) {
+                                Log.e("HistoryScreen", "Error parsing food entry: ${e.message}")
+                                null
+                            }
+                        }
+                        filteredFoodEntries = foodEntries // Initially set filtered list as the entire list
+                    }
+                }
+
+            // Fetch Steps History from Firestore
+            FirebaseFirestore.getInstance().collection("steps")
+                .whereEqualTo("userId", it.uid)
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.e("HistoryScreen", "Error fetching steps entries: ${error.message}")
+                        return@addSnapshotListener
+                    }
+                    snapshot?.let { snap ->
+                        stepsHistory = snap.documents.mapNotNull { doc ->
+                            try {
+                                doc.toObject(StepsEntry::class.java)?.copy(id = doc.id)
+                            } catch (e: Exception) {
+                                Log.e("HistoryScreen", "Error parsing steps entry: ${e.message}")
+                                null
+                            }
+                        }
+                        filteredStepsHistory = stepsHistory // Initially set filtered list as the entire list
+                    }
+                }
+        }
+    }
+
+    // Function to filter the history entries strictly by date
+    fun filterHistoryEntries(query: String) {
+        if (query.isEmpty()) {
+            filteredFoodEntries = foodEntries
+            filteredStepsHistory = stepsHistory
+        } else {
+            val lowerCaseQuery = query.lowercase()
+
+            // Filter food entries by formatted date string
+            filteredFoodEntries = foodEntries.filter {
+                val formattedDate = it.timestamp?.toDate()?.let { dateFormatter.format(it) }
+                formattedDate?.lowercase()?.contains(lowerCaseQuery) == true
+            }
+
+            // Filter steps entries by formatted date string
+            filteredStepsHistory = stepsHistory.filter {
+                val formattedDate = it.timestamp?.toDate()?.let { dateFormatter.format(it) }
+                formattedDate?.lowercase()?.contains(lowerCaseQuery) == true
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("History") }, modifier = Modifier.padding(horizontal = 24.dp))
+            TopAppBar(
+                title = { Text("History") },
+                modifier = Modifier.padding(horizontal = 24.dp),
+                actions = {
+                    IconButton(onClick = { isSearchActive = !isSearchActive }) {
+                        Icon(Icons.Filled.Search, contentDescription = "Search")
+                    }
+                }
+            )
         },
         bottomBar = { BottomNavigationBar(navController) },
         containerColor = MaterialTheme.colorScheme.background,
         content = { paddingValues ->
-            if (currentUser == null) {
-                // Display a message if no user is logged in
-                Column(
-                    modifier = modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
-                ) {
-                    Text("User not logged in.", style = MaterialTheme.typography.bodyLarge)
-                }
-                return@Scaffold
-            }
-
-            // Listen to Firestore snapshots safely
-            LaunchedEffect(Unit) {
-                // Food Entries History
-                FirebaseFirestore.getInstance().collection("foodEntries")
-                    .whereEqualTo("userId", currentUser.uid)
-                    .orderBy("timestamp", Query.Direction.DESCENDING)
-                    .addSnapshotListener { snapshot, error ->
-                        if (error != null) {
-                            Log.e("HistoryScreen", "Error fetching food entries: ${error.message}")
-                            return@addSnapshotListener
-                        }
-                        snapshot?.let { snap ->
-                            foodEntries = snap.documents.mapNotNull { doc ->
-                                try {
-                                    doc.toObject(FoodEntry2::class.java)?.copy(id = doc.id)
-                                } catch (e: Exception) {
-                                    Log.e("HistoryScreen", "Error parsing food entry: ${e.message}")
-                                    null
-                                }
-                            }
-                        }
-                    }
-
-                // Steps History
-                FirebaseFirestore.getInstance().collection("steps")
-                    .whereEqualTo("userId", currentUser.uid)
-                    .orderBy("timestamp", Query.Direction.DESCENDING)
-                    .addSnapshotListener { snapshot, error ->
-                        if (error != null) {
-                            Log.e("HistoryScreen", "Error fetching steps entries: ${error.message}")
-                            return@addSnapshotListener
-                        }
-                        snapshot?.let { snap ->
-                            stepsHistory = snap.documents.mapNotNull { doc ->
-                                try {
-                                    doc.toObject(StepsEntry::class.java)?.copy(id = doc.id)
-                                } catch (e: Exception) {
-                                    Log.e(
-                                        "HistoryScreen",
-                                        "Error parsing steps entry: ${e.message}"
-                                    )
-                                    null
-                                }
-                            }
-                        }
-                    }
-            }
-
-            // UI: Display the history in a LazyColumn for smoother scrolling
-            LazyColumn(
+            Column(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(horizontal = 40.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                item {
-                    Text("Food Entries History", style = MaterialTheme.typography.titleLarge)
+                // Show the search bar when the search is active
+                if (isSearchActive) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { query ->
+                            searchQuery = query
+                            filterHistoryEntries(query) // Immediately filter as the user types
+                        },
+                        label = { Text("Search by Date") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        singleLine = true
+                    )
                 }
-                if (foodEntries.isEmpty()) {
-                    item {
-                        Text("No food entries found.", style = MaterialTheme.typography.bodyLarge)
+
+                if (foodEntries.isEmpty() && stepsHistory.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else if (filteredFoodEntries.isEmpty() && filteredStepsHistory.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No history found.")
                     }
                 } else {
-                    items(foodEntries) { entry ->
-                        FoodEntryHistoryCard(entry = entry)
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 24.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        item {
+                            Text("Food Entries History", style = MaterialTheme.typography.titleLarge)
+                        }
+                        if (filteredFoodEntries.isEmpty()) {
+                            item {
+                                Text("No food entries found.", style = MaterialTheme.typography.bodyLarge)
+                            }
+                        } else {
+                            items(filteredFoodEntries) { entry ->
+                                val dismissState = rememberDismissState(
+                                    confirmStateChange = { dismissValue ->
+                                        if (dismissValue == DismissValue.DismissedToStart) {
+                                            pendingDeleteItem = entry
+                                        }
+                                        false // Don't auto-dismiss
+                                    }
+                                )
+
+                                SwipeToDismiss(
+                                    state = dismissState,
+                                    directions = setOf(DismissDirection.EndToStart),
+                                    background = {
+                                        val color = if (dismissState.targetValue == DismissValue.Default)
+                                            MaterialTheme.colorScheme.surface
+                                        else
+                                            MaterialTheme.colorScheme.error
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clip(RoundedCornerShape(16.dp))
+                                                .background(color)
+                                                .padding(8.dp),
+                                            contentAlignment = Alignment.CenterEnd
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete",
+                                                tint = MaterialTheme.colorScheme.onError
+                                            )
+                                        }
+                                    },
+                                    dismissContent = {
+                                        FoodEntryHistoryCard(entry = entry, dateFormatter = dateFormatter)
+                                    }
+                                )
+                            }
+                        }
+                        item {
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Text("Steps History", style = MaterialTheme.typography.titleLarge)
+                        }
+                        if (filteredStepsHistory.isEmpty()) {
+                            item {
+                                Text("No steps data found.", style = MaterialTheme.typography.bodyLarge)
+                            }
+                        } else {
+                            items(filteredStepsHistory) { entry ->
+                                val dismissState = rememberDismissState(
+                                    confirmStateChange = { dismissValue ->
+                                        if (dismissValue == DismissValue.DismissedToStart) {
+                                            pendingDeleteItem = entry
+                                        }
+                                        false // Don't auto-dismiss
+                                    }
+                                )
+
+                                SwipeToDismiss(
+                                    state = dismissState,
+                                    directions = setOf(DismissDirection.EndToStart),
+                                    background = {
+                                        val color = if (dismissState.targetValue == DismissValue.Default)
+                                            MaterialTheme.colorScheme.surface
+                                        else
+                                            MaterialTheme.colorScheme.error
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clip(RoundedCornerShape(16.dp))
+                                                .background(color)
+                                                .padding(8.dp),
+                                            contentAlignment = Alignment.CenterEnd
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete",
+                                                tint = MaterialTheme.colorScheme.onError
+                                            )
+                                        }
+                                    },
+                                    dismissContent = {
+                                        StepsHistoryCard(entry = entry, dateFormatter = dateFormatter)
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
-                item {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text("Steps History", style = MaterialTheme.typography.titleLarge)
-                }
-                if (stepsHistory.isEmpty()) {
-                    item {
-                        Text("No steps data found.", style = MaterialTheme.typography.bodyLarge)
+            }
+
+            // Confirmation dialog for deletion
+            pendingDeleteItem?.let { item ->
+                AlertDialog(
+                    onDismissRequest = { pendingDeleteItem = null },
+                    title = { Text("Delete History Entry") },
+                    text = { Text("Are you sure you want to delete this entry?") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                if (item is FoodEntry2) {
+                                    FirebaseFirestore.getInstance().collection("foodEntries")
+                                        .document(item.id)
+                                        .delete()
+                                        .addOnSuccessListener {
+                                            foodEntries = foodEntries.filter { it.id != item.id }
+                                            filteredFoodEntries = filteredFoodEntries.filter { it.id != item.id }
+                                        }
+                                } else if (item is StepsEntry) {
+                                    FirebaseFirestore.getInstance().collection("steps")
+                                        .document(item.id)
+                                        .delete()
+                                        .addOnSuccessListener {
+                                            stepsHistory = stepsHistory.filter { it.id != item.id }
+                                            filteredStepsHistory = filteredStepsHistory.filter { it.id != item.id }
+                                        }
+                                }
+                                pendingDeleteItem = null
+                            }
+                        ) {
+                            Text("Delete")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { pendingDeleteItem = null }) {
+                            Text("Cancel")
+                        }
                     }
-                } else {
-                    items(stepsHistory) { entry ->
-                        StepsHistoryCard(entry = entry)
-                    }
-                }
+                )
             }
         }
     )
 }
 
 @Composable
-fun FoodEntryHistoryCard(entry: FoodEntry2) {
-    val sdf = SimpleDateFormat("MMM d, yyyy hh:mm a", Locale.getDefault())
-    val dateString = entry.timestamp?.toDate()?.let { sdf.format(it) } ?: "No date"
+fun FoodEntryHistoryCard(entry: FoodEntry2, dateFormatter: SimpleDateFormat) {
+    val dateString = entry.timestamp?.toDate()?.let { dateFormatter.format(it) } ?: "No date"
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -173,9 +355,8 @@ fun FoodEntryHistoryCard(entry: FoodEntry2) {
 }
 
 @Composable
-fun StepsHistoryCard(entry: StepsEntry) {
-    val sdf = SimpleDateFormat("MMM d, yyyy hh:mm a", Locale.getDefault())
-    val dateString = entry.timestamp?.toDate()?.let { sdf.format(it) } ?: "No date"
+fun StepsHistoryCard(entry: StepsEntry, dateFormatter: SimpleDateFormat) {
+    val dateString = entry.timestamp?.toDate()?.let { dateFormatter.format(it) } ?: "No date"
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -205,3 +386,5 @@ data class StepsEntry(
     val timestamp: Timestamp? = null,
     val userId: String = ""
 )
+
+

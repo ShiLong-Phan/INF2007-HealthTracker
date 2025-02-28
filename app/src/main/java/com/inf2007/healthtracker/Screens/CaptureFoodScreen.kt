@@ -115,7 +115,8 @@ fun CaptureFoodScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "Capture Food") }, modifier = Modifier.padding(horizontal = 24.dp)
+                title = { Text(text = "Capture Food") },
+                modifier = Modifier.padding(horizontal = 24.dp)
             )
         },
         bottomBar = { BottomNavigationBar(navController) }
@@ -126,7 +127,7 @@ fun CaptureFoodScreen(navController: NavController) {
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp), // Control vertical spacing
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Clickable box to capture image
@@ -168,7 +169,7 @@ fun CaptureFoodScreen(navController: NavController) {
                     focusedBorderColor = Primary,
                     unfocusedBorderColor = Unfocused
                 ),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
+                modifier = Modifier.fillMaxWidth()
             )
 
             // Recognize food button
@@ -176,10 +177,10 @@ fun CaptureFoodScreen(navController: NavController) {
                 onClick = {
                     recognizeFood(imageBitmap, foodName)
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.background, contentColor = Primary, ),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.background, contentColor = Primary),
                 border = BorderStroke(1.dp, Primary),
                 shape = roundedShape,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(56.dp)
+                modifier = Modifier.fillMaxWidth().height(56.dp)
             ) {
                 Text("Calculate Estimated Caloric Value of: $foodName")
             }
@@ -190,12 +191,12 @@ fun CaptureFoodScreen(navController: NavController) {
                 Log.i("CaptureFoodScreen", "Recognized food: ${it}")
                 Text(
                     "Recognized Food: Based on the image and typical ingredients of $foodName",
-                    style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 24.dp)
+                    style = MaterialTheme.typography.bodyLarge
                 )
 
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                     horizontalAlignment = Alignment.Start
                 ) {
                     // Text
@@ -234,7 +235,7 @@ fun CaptureFoodScreen(navController: NavController) {
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 shape = roundedShape,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 24.dp).height(56.dp)
+                modifier = Modifier.fillMaxWidth().height(56.dp)
             ) {
                 Text("Save Food Data")
             }
