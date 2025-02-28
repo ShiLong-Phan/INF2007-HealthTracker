@@ -89,6 +89,7 @@ fun HistoryScreen(
             FirebaseFirestore.getInstance().collection("foodEntries")
                 .whereEqualTo("userId", it.uid)
                 //.orderBy("timestamp", Query.Direction.DESCENDING)
+                .orderBy("dateString", Query.Direction.DESCENDING)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         Log.e("HistoryScreen", "Error fetching food entries: ${error.message}")
@@ -111,6 +112,7 @@ fun HistoryScreen(
             FirebaseFirestore.getInstance().collection("steps")
                 .whereEqualTo("userId", it.uid)
                 //.orderBy("timestamp", Query.Direction.DESCENDING)
+                .orderBy("dateString", Query.Direction.DESCENDING)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         Log.e("HistoryScreen", "Error fetching steps entries: ${error.message}")
