@@ -446,7 +446,7 @@ fun QuickWaterLogging(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             val interactionSource = remember { MutableInteractionSource() }
 
@@ -457,7 +457,11 @@ fun QuickWaterLogging(
                     contentColor = Unfocused
                 ),
                 border = BorderStroke(1.dp, Unfocused),
-                interactionSource = interactionSource
+                interactionSource = interactionSource,
+                contentPadding = PaddingValues(
+                    horizontal = 16.dp,
+                    vertical = 8.dp
+                )
             ) {
                 val isPressed = interactionSource.collectIsPressedAsState()
                 Text(
@@ -473,7 +477,11 @@ fun QuickWaterLogging(
                     contentColor = Unfocused
                 ),
                 border = BorderStroke(1.dp, Unfocused),
-                interactionSource = interactionSource
+                interactionSource = interactionSource,
+                contentPadding = PaddingValues(
+                    horizontal = 16.dp,
+                    vertical = 8.dp
+                )
             ) {
                 val isPressed = interactionSource.collectIsPressedAsState()
                 Text(
@@ -489,7 +497,11 @@ fun QuickWaterLogging(
                     contentColor = Unfocused
                 ),
                 border = BorderStroke(1.dp, Unfocused),
-                interactionSource = interactionSource
+                interactionSource = interactionSource,
+                contentPadding = PaddingValues(
+                    horizontal = 16.dp,
+                    vertical = 8.dp
+                )
             ) {
                 val isPressed = interactionSource.collectIsPressedAsState()
                 Text(
@@ -568,7 +580,8 @@ fun AIHealthTipsCard(healthTips: String, isLoading: Boolean) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
         Text(
             "AI Health Tips",
@@ -581,24 +594,24 @@ fun AIHealthTipsCard(healthTips: String, isLoading: Boolean) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(8.dp, shape = RoundedCornerShape(16.dp)), // ✅ Add shadow effect
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-        ) {
+                .shadow(8.dp, shape = MaterialTheme.shapes.small,),
+            colors = CardDefaults.cardColors(containerColor = Secondary, contentColor = Color.White),
+            ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                contentAlignment = Alignment.Center // ✅ Centers loading indicator
+                contentAlignment = Alignment.Center
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator()
-                } else {
+                    CircularProgressIndicator(color = Color.White)
+                }  else {
                     this@Card.AnimatedVisibility(visible = !isLoading, enter = fadeIn()) {
                         Text(
                             text = healthTips,
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                             textAlign = TextAlign.Center,
-                            color = Color.Black
+                            modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
                         )
                     }
                 }
