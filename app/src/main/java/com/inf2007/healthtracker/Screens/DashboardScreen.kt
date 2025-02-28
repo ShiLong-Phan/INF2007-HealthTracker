@@ -70,10 +70,12 @@ fun DashboardScreen(
     var healthTips by remember { mutableStateOf("Fetching AI health tips...") }
     var isLoading by remember { mutableStateOf(true) }
     var weeklySteps by remember { mutableStateOf(listOf(1000, 1000, 1000, 1000, 1000, 1000, 1000)) }
+    var desiredSteps by remember { mutableStateOf(0) }
+    var desiredHydration by remember { mutableStateOf(0) }
 
-    val dailyStepGoal = 10000
+    val dailyStepGoal = desiredSteps ?: 10000
     val dailyCalorieGoal = desiredCalorieIntake
-    val dailyHydrationGoal = 3200
+    val dailyHydrationGoal = desiredHydration ?: 3200
 
     var foodEntries by remember { mutableStateOf<List<FoodEntry>>(emptyList()) }
 
@@ -120,6 +122,8 @@ fun DashboardScreen(
                     hydration = document.getLong("hydration")?.toInt() ?: 0
                     weight = document.getLong("weight")?.toInt() ?: 0
                     desiredCalorieIntake = document.getLong("calorie_intake")?.toInt() ?: 0
+                    desiredSteps = document.getLong("steps_goal")?.toInt() ?: 0
+                    desiredHydration = document.getLong("hydration_goal")?.toInt() ?: 0
                 }
 
             // Fetch steps from the `steps` collection:
