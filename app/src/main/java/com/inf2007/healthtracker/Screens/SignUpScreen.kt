@@ -34,6 +34,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +44,14 @@ import com.google.firebase.auth.FirebaseAuth
 import com.inf2007.healthtracker.ui.theme.Primary
 import com.inf2007.healthtracker.ui.theme.Tertiary
 import com.inf2007.healthtracker.ui.theme.Unfocused
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import android.view.KeyEvent
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.text.input.VisualTransformation
 
 @Composable
 fun SignUpScreen(
@@ -51,6 +61,7 @@ fun SignUpScreen(
     var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+    var isPasswordVisible by rememberSaveable { mutableStateOf(false) }  // State to toggle password visibility
     var isLoading by rememberSaveable { mutableStateOf(false) }
     var nameErrorMessage by rememberSaveable { mutableStateOf("") }
     var emailErrorMessage by rememberSaveable { mutableStateOf("") }
@@ -58,6 +69,10 @@ fun SignUpScreen(
     val context = LocalContext.current
 
     val roundedShape = MaterialTheme.shapes.small
+
+    val nameFocusRequester = remember { FocusRequester() }
+    val emailFocusRequester = remember { FocusRequester() }
+    val passwordFocusRequester = remember { FocusRequester() }
 
     Column(
         modifier = modifier
@@ -93,7 +108,16 @@ fun SignUpScreen(
                 focusedBorderColor = Primary,
                 unfocusedBorderColor = Unfocused
             ),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(nameFocusRequester) // Attach focusRequester
+                .onKeyEvent {
+                    // Move focus to the next field when 'Tab' is pressed
+                    if (it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_TAB) {
+                        emailFocusRequester.requestFocus()
+                    }
+                    false
+                }
         )
 
         if (nameErrorMessage.isNotEmpty()) {
@@ -121,7 +145,16 @@ fun SignUpScreen(
                 focusedBorderColor = Primary,
                 unfocusedBorderColor = Unfocused
             ),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(emailFocusRequester) // Attach focusRequester
+                .onKeyEvent {
+                    // Move focus to the next field when 'Tab' is pressed
+                    if (it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_TAB) {
+                        passwordFocusRequester.requestFocus()
+                    }
+                    false
+                }
         )
 
         if (emailErrorMessage.isNotEmpty()) {
@@ -134,23 +167,60 @@ fun SignUpScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Password Text Field
+//        OutlinedTextField(
+//            value = password,
+//            onValueChange = { password = it },
+//            label = { Text("Password") },
+//            visualTransformation = PasswordVisualTransformation(),
+//            leadingIcon = {
+//                Icon(
+//                    imageVector = Icons.Default.Lock,
+//                    contentDescription = "Password Icon"
+//                )
+//            },
+//            shape = roundedShape,
+//            colors = OutlinedTextFieldDefaults.colors(
+//                focusedBorderColor = Primary,
+//                unfocusedBorderColor = Unfocused
+//            ),
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .focusRequester(passwordFocusRequester) // Attach focusRequester
+//                .onKeyEvent {
+//                    false
+//                }
+//        )
+
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
             label = { Text("Password") },
-            visualTransformation = PasswordVisualTransformation(),
+            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Lock,
                     contentDescription = "Password Icon"
                 )
             },
+            trailingIcon = {
+                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                    Icon(
+                        imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (isPasswordVisible) "Hide password" else "Show password"
+                    )
+                }
+            },
             shape = roundedShape,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Primary,
                 unfocusedBorderColor = Unfocused
             ),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(passwordFocusRequester) // Attach focusRequester
+                .onKeyEvent {
+                    false
+                }
         )
 
         if (passwordErrorMessage.isNotEmpty()) {
@@ -196,6 +266,7 @@ fun SignUpScreen(
                         }
                 }
             },
+            enabled = name.isNotEmpty() &&  email.isNotEmpty() && password.isNotEmpty(),
             shape = roundedShape,
             colors = ButtonDefaults.buttonColors(containerColor = Primary),
             modifier = Modifier.fillMaxWidth().height(56.dp)

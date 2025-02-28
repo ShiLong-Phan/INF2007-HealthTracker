@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import androidx.compose.ui.graphics.Color
+import com.inf2007.healthtracker.ui.theme.Secondary
 import com.inf2007.healthtracker.ui.theme.Primary
 import com.inf2007.healthtracker.ui.theme.Unfocused
 import com.inf2007.healthtracker.utilities.BottomNavigationBar
@@ -29,8 +31,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import com.inf2007.healthtracker.ui.theme.Secondary
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
 
@@ -184,6 +184,8 @@ fun MealPlanHistoryScreen(
 
 @Composable
 fun MealHistoryItem(navController: NavController, history: MealHistory) {
+    val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()) // Formats the date
+    val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault()) // Formats the time
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clickable { navController.navigate("meal_plan_history_detail/${history.uid}/${history.date.time}") },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -197,19 +199,31 @@ fun MealHistoryItem(navController: NavController, history: MealHistory) {
             Column (
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ){
-                Text(
-                    text = "Date: ${
-                        SimpleDateFormat(
-                            "yyyy-MM-dd HH:mm",
-                            Locale.getDefault()
-                        ).format(history.date)
-                    }",
-                    style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.secondaryContainer)
-                )
+                // Date and Time Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = dateFormat.format(history.date),
+                        style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.secondaryContainer)
+                    )
+
+                    Text(
+                        text = timeFormat.format(history.date),
+                        style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.secondaryContainer)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Meals
                 Text(
                     text = "Meals: ${history.meals.size} items",
                     style = MaterialTheme.typography.bodyLarge
                 )
+
+                // Restaurants
                 Text(
                     text = "Restaurants: ${history.restaurants.size} places",
                     style = MaterialTheme.typography.bodyLarge
@@ -218,4 +232,3 @@ fun MealHistoryItem(navController: NavController, history: MealHistory) {
         }
     }
 }
-

@@ -44,6 +44,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.remember
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
@@ -226,7 +227,7 @@ fun DashboardScreen(
                         stepCount = newStepCount
                     }
                     // Calorie Intake
-                    HealthStatCard("Calorie Intake", "$calorieIntake kcal")
+                    HealthStatCard(title = "Calorie Intake", value = "$calorieIntake kcal", onClick = { navController.navigate("profile_screen") })
                 }
 
                 Column(
@@ -236,7 +237,7 @@ fun DashboardScreen(
                     // Water Intake
                     HealthStatCard("Water Intake", "$hydration ml")
                     // Current Weight
-                    HealthStatCard("Current Weight", "$weight kg")
+                    HealthStatCard(title = "Current Weight", value = "$weight kg", onClick = { navController.navigate("profile_screen") })
                 }
             }
 
@@ -302,7 +303,6 @@ fun DashboardScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             AIHealthTipsCard(healthTips = healthTips, isLoading = isLoading)
-
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -505,9 +505,11 @@ fun QuickWaterLogging(
  * Card to display a title and value.
  */
 @Composable
-fun HealthStatCard(title: String, value: String) {
+fun HealthStatCard(title: String, value: String, onClick: (() -> Unit)? = null) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier), // Apply clickable only if onClick is not null
         colors = CardDefaults.cardColors(containerColor = Secondary),
         shape = MaterialTheme.shapes.small
     ) {

@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.google.firebase.firestore.FirebaseFirestore
+import com.inf2007.healthtracker.ui.theme.Primary
 import com.inf2007.healthtracker.utilities.BottomNavigationBar
 import com.inf2007.healthtracker.utilities.MealHistory
 import com.inf2007.healthtracker.utilities.Restaurant
@@ -123,7 +124,7 @@ fun MealPlanHistoryDetailScreen(
                     }
                 },
                 actions = { /* additional actions if needed */ },
-                modifier = Modifier.padding(horizontal = 24.dp)
+                modifier = Modifier.padding(horizontal = 20.dp)
             )
         },
         bottomBar = { BottomNavigationBar(navController) }
@@ -131,8 +132,7 @@ fun MealPlanHistoryDetailScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
+                .padding(paddingValues),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.Start
         ) {
@@ -151,13 +151,14 @@ fun MealPlanHistoryDetailScreen(
                     mealHistory?.let { history ->
                         Text(
                             text = "Date: ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(history.date)}",
-                            style = MaterialTheme.typography.titleLarge
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(horizontal = 40.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Header Row: "Meals:" and the button on the far right.
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -172,12 +173,13 @@ fun MealPlanHistoryDetailScreen(
                                     }
                                 },
                                 enabled = hasEdits && !isSaved,
-                                modifier = Modifier.size(80.dp, 30.dp)
+                                modifier = Modifier.size(80.dp, 32.dp),
+                                shape = MaterialTheme.shapes.small
                             ) {
-                                Box(modifier = Modifier.fillMaxSize().offset(y = (-3).dp), contentAlignment = Alignment.Center) {
+                                Box(modifier = Modifier.fillMaxSize().offset(y = (0).dp), contentAlignment = Alignment.Center) {
                                     Text(
                                         text = buttonText,
-                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = Color.White)
+                                        style = MaterialTheme.typography.bodySmall.copy(color = Color.White)
                                     )
                                 }
                             }
@@ -185,7 +187,7 @@ fun MealPlanHistoryDetailScreen(
 
                         // Editable Meal List using itemsIndexed for stability.
                         Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                            LazyColumn(modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp)) {
                                 itemsIndexed(updatedMeals) { index, meal ->
                                     EditableMealItem(
                                         meal = meal,
@@ -202,9 +204,9 @@ fun MealPlanHistoryDetailScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Restaurant List Section with Images.
-                        Text("Nearby Restaurants:", style = MaterialTheme.typography.titleMedium)
-                        LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                        // Restaurant List Section with Images
+                        Text("Nearby Restaurants:", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 40.dp))
+                        LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 40.dp)) {
                             items(history.restaurants) { restaurant ->
                                 RestaurantItem(restaurant)
                             }
