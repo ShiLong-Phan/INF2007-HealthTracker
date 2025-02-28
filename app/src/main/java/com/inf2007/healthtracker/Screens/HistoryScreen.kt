@@ -191,7 +191,7 @@ fun HistoryScreen(
 
                 if (foodEntries.isEmpty() && stepsHistory.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        Text("No history found.")
                     }
                 } else if (filteredFoodEntries.isEmpty() && filteredStepsHistory.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
