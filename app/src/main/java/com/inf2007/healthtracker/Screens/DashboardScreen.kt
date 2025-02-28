@@ -46,7 +46,9 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import com.inf2007.healthtracker.BuildConfig
 import com.inf2007.healthtracker.utilities.GeminiService
@@ -63,7 +65,7 @@ fun DashboardScreen(
     modifier: Modifier = Modifier,
 ) {
     var steps by remember { mutableStateOf(0) }
-    var calorieIntake by remember { mutableStateOf(0) }
+    var calorieIntakeToday by remember { mutableStateOf(0) }
     var desiredCalorieIntake by remember { mutableStateOf(0) }
     var hydration by remember { mutableStateOf(0) }
     var weight by remember { mutableStateOf(0) }
@@ -72,19 +74,24 @@ fun DashboardScreen(
     var weeklySteps by remember { mutableStateOf(listOf(1000, 1000, 1000, 1000, 1000, 1000, 1000)) }
     var desiredSteps by remember { mutableStateOf(0) }
     var desiredHydration by remember { mutableStateOf(0) }
-
-    val dailyStepGoal = desiredSteps ?: 10000
-    val dailyCalorieGoal = desiredCalorieIntake
-    val dailyHydrationGoal = desiredHydration ?: 3200
-
     var foodEntries by remember { mutableStateOf<List<FoodEntry>>(emptyList()) }
+
+    // ---------------------------
+    // New states for date selection:
+    var selectedDate by remember { mutableStateOf(Date()) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    val dateFormatForFood = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+    val selectedDateString = dateFormatForFood.format(selectedDate)
+    // ---------------------------
+
+    val dailyStepGoal = if (desiredSteps != 0) desiredSteps else 10000
+    val dailyCalorieGoal = desiredCalorieIntake
+    val dailyHydrationGoal = if (desiredHydration != 0) desiredHydration else 3200
 
     val coroutineScope = rememberCoroutineScope()
     val currentUser = FirebaseAuth.getInstance().currentUser
-
-    //moving of stepcounter stuff
     var user by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
-    var stepCount by remember { mutableStateOf(0) } // Step count from StepCounter
+    var stepCount by remember { mutableStateOf(0) }
     val firestore = FirebaseFirestore.getInstance()
     val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
     val formattedDate = dateFormat.format(Date())
@@ -92,7 +99,7 @@ fun DashboardScreen(
 
     val geminiService = remember { GeminiService(BuildConfig.geminiApiKey) }
 
-    // Fetch user data from Firestore
+    // Fetch user data from Firestore (for general settings)
     LaunchedEffect(Unit) {
         currentUser?.let { user ->
             val calendar = Calendar.getInstance() // Uses TimeZone.getDefault()
@@ -110,11 +117,8 @@ fun DashboardScreen(
             val endOfDay = com.google.firebase.Timestamp(calendar.time)
 
             android.util.Log.d("CalendarDebug", "Start of Day: ${calendar.time} | End of Day: $endOfDay")
-
             val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
             val todayString = dateFormat.format(Date())
-
-            // Fetch hydration, weight, and desiredCalorieIntake from `users`:
             FirebaseFirestore.getInstance().collection("users")
                 .document(user.uid)
                 .get()
@@ -125,17 +129,7 @@ fun DashboardScreen(
                     desiredSteps = document.getLong("steps_goal")?.toInt() ?: 0
                     desiredHydration = document.getLong("hydration_goal")?.toInt() ?: 0
                 }
-
-            // Fetch steps from the `steps` collection:
-//            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-//            val stepsDocId = "${user.uid}_$dateStr"
-//            FirebaseFirestore.getInstance().collection("steps")
-//                .document(stepsDocId)
-//                .get()
-//                .addOnSuccessListener { doc ->
-//                    steps = doc.getLong("steps")?.toInt() ?: 0
-//                }
-
+            //Steps
             //Code for steps data only for the current day
             FirebaseFirestore.getInstance().collection("steps")
                 .whereEqualTo("userId", user.uid) // ensure your steps documents include a "userId" field
@@ -150,11 +144,17 @@ fun DashboardScreen(
                         steps = 0
                     }
                 }
+        }
+    }
 
-            // Listen for changes to the `foodEntries` collection for the current day:
+
+    // ---------------------------
+    // Query for food entries list based on selected date:
+    LaunchedEffect(selectedDate, currentUser) {
+        currentUser?.let { user ->
             FirebaseFirestore.getInstance().collection("foodEntries")
                 .whereEqualTo("userId", user.uid)
-                .whereEqualTo("dateString", todayString)
+                .whereEqualTo("dateString", selectedDateString)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) return@addSnapshotListener
                     if (snapshot != null && !snapshot.isEmpty) {
@@ -162,21 +162,58 @@ fun DashboardScreen(
                             doc.toObject(FoodEntry::class.java)?.copy(id = doc.id)
                         }
                         foodEntries = items
-                        calorieIntake = items.sumOf { it.caloricValue }
                     } else {
                         foodEntries = emptyList()
-                        calorieIntake = 0
                     }
                 }
         }
     }
 
-    // Fetch AI health tips
+    // ---------------------------
+    // Query for calorie intake - always use current day:
+    LaunchedEffect(currentUser) {
+        currentUser?.let { user ->
+            val todayString = dateFormatForFood.format(Date())  // Today’s date
+            FirebaseFirestore.getInstance().collection("foodEntries")
+                .whereEqualTo("userId", user.uid)
+                .whereEqualTo("dateString", todayString)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) return@addSnapshotListener
+                    calorieIntakeToday = if (snapshot != null && !snapshot.isEmpty) {
+                        snapshot.documents.sumOf { doc ->
+                            doc.getLong("caloricValue")?.toInt() ?: 0
+                        }
+                    } else {
+                        0
+                    }
+                }
+        }
+    }
+
+    // Fetch AI health tips (independent of food entries)
     LaunchedEffect(Unit) {
         coroutineScope.launch {
             healthTips = geminiService.fetchHealthTips()
             isLoading = false
         }
+    }
+
+    // DatePickerDialog display:
+    if (showDatePicker) {
+        val context = LocalContext.current
+        // Using Android's DatePickerDialog
+        android.app.DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val calendar = Calendar.getInstance()
+                calendar.set(year, month, dayOfMonth)
+                selectedDate = calendar.time
+                showDatePicker = false
+            },
+            Calendar.getInstance().get(Calendar.YEAR),
+            Calendar.getInstance().get(Calendar.MONTH),
+            Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+        ).show()
     }
 
     Scaffold(
@@ -194,11 +231,8 @@ fun DashboardScreen(
                 }
             )
         },
-        bottomBar = {
-            BottomNavigationBar(navController)
-        }
+        bottomBar = { BottomNavigationBar(navController) }
     ) { paddingValues ->
-        // Make content scrollable
         Column(
             modifier = modifier
                 .fillMaxSize()
@@ -230,8 +264,8 @@ fun DashboardScreen(
                     StepCounter(user!!) { newStepCount ->
                         stepCount = newStepCount
                     }
-                    // Calorie Intake
-                    HealthStatCard(title = "Calorie Intake", value = "$calorieIntake kcal", onClick = { navController.navigate("profile_screen") })
+                    // Calorie Intake card uses today's calorie intake
+                    HealthStatCard(title = "Calorie Intake", value = "$calorieIntakeToday kcal", onClick = { navController.navigate("profile_screen") })
                 }
 
                 Column(
@@ -246,7 +280,7 @@ fun DashboardScreen(
             }
 
             DailyGoalProgress("Steps", steps, dailyStepGoal, "steps")
-            DailyGoalProgress("Calories", calorieIntake, dailyCalorieGoal, "kcal")
+            DailyGoalProgress("Calories", calorieIntakeToday, dailyCalorieGoal, "kcal")
             DailyGoalProgress("Hydration", hydration, dailyHydrationGoal, "ml")
 
             // Log Extra Water
@@ -290,12 +324,34 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Food Eaten
+            // Food Entries Section with Date Selection (for list)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Food Entries for: $selectedDateString",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = { showDatePicker = true }) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = "Select Date"
+                    )
+                }
+            }
+
             Text("Food Eaten", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
             if (foodEntries.isEmpty()) {
                 Text("No entries yet!", style = MaterialTheme.typography.bodyLarge)
             } else {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 24.dp)) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                ) {
                     foodEntries.forEach { entry ->
                         FoodEntryCard(entry)
                     }
@@ -306,26 +362,15 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // AI Health Tips Section
             AIHealthTipsCard(healthTips = healthTips, isLoading = isLoading)
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            // 🔹 Refresh Button
-//            Button(
-//                onClick = {
-//                    isLoading = true
-//                    coroutineScope.launch {
-//                        healthTips = geminiService.fetchHealthTips()
-//                        isLoading = false
-//                    }
-//                },
-//                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
-//            ) {
-//                Text("Refresh AI Health Tips")
-//            }
         }
     }
 }
+
+
 
 /**
  * Data class for a food entry document in Firestore.

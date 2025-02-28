@@ -5,11 +5,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +22,7 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.SwipeToDismiss
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.rememberDismissState
@@ -54,6 +57,9 @@ import com.inf2007.healthtracker.ui.theme.Secondary
 import com.inf2007.healthtracker.utilities.BottomNavigationBar
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.compose.material.icons.filled.LocalDining
+import androidx.compose.material.icons.filled.DirectionsWalk
+import com.inf2007.healthtracker.ui.theme.Primary
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
@@ -72,6 +78,9 @@ fun HistoryScreen(
 
     // Date formatter to use for displaying and filtering dates
     val dateFormatter = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault())
+
+    val totalCalories = filteredFoodEntries.sumOf { it.caloricValue }
+    val totalSteps = filteredStepsHistory.sumOf { it.steps }
 
     LaunchedEffect(Unit) {
         currentUser?.let {
@@ -158,12 +167,13 @@ fun HistoryScreen(
         bottomBar = { BottomNavigationBar(navController) },
         containerColor = MaterialTheme.colorScheme.background,
         content = { paddingValues ->
+            // Inside your Scaffold's content lambda:
             Column(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // Show the search bar when the search is active
+                // Show the search bar when active
                 if (isSearchActive) {
                     OutlinedTextField(
                         value = searchQuery,
@@ -188,12 +198,22 @@ fun HistoryScreen(
                         Text("No history found.")
                     }
                 } else {
+                    // Calculate the totals from the filtered lists
+                    val totalCalories = filteredFoodEntries.sumOf { it.caloricValue }
+                    val totalSteps = filteredStepsHistory.sumOf { it.steps }
+
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = 24.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        // Show the totals at the top of the list
+                        item {
+                            TotalCard(totalCalories, totalSteps)
+
+                        }
+
                         item {
                             Text("Food Entries History", style = MaterialTheme.typography.titleLarge)
                         }
@@ -291,7 +311,10 @@ fun HistoryScreen(
                         }
                     }
                 }
+
+                // Confirmation dialog for deletion remains unchanged...
             }
+
 
             // Confirmation dialog for deletion
             pendingDeleteItem?.let { item ->
@@ -347,7 +370,17 @@ fun FoodEntryHistoryCard(entry: FoodEntry2, dateFormatter: SimpleDateFormat) {
         colors = CardDefaults.cardColors(containerColor = Secondary, contentColor = Color.White)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Food: ${entry.foodName}", style = MaterialTheme.typography.titleMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.LocalDining,
+                    contentDescription = "Calories Icon",
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("${entry.foodName}", style = MaterialTheme.typography.titleMedium)
+
+            }
+
             Text("Calories: ${entry.caloricValue}", style = MaterialTheme.typography.bodyMedium)
             Text("Date: $dateString", style = MaterialTheme.typography.bodySmall)
         }
@@ -365,10 +398,67 @@ fun StepsHistoryCard(entry: StepsEntry, dateFormatter: SimpleDateFormat) {
         colors = CardDefaults.cardColors(containerColor = Secondary, contentColor = Color.White)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Steps: ${entry.steps}", style = MaterialTheme.typography.titleMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.DirectionsWalk,
+                    contentDescription = "Steps Icon",
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("${entry.steps}", style = MaterialTheme.typography.titleMedium)
+
+            }
+
             Text("Date: $dateString", style = MaterialTheme.typography.bodySmall)
         }
     }
+}
+
+@Composable
+fun TotalCard(totalCalories: Int, totalSteps: Int) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = MaterialTheme.shapes.small,
+        colors = CardDefaults.cardColors(containerColor = Primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            //horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Row for Total Calories
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.LocalDining,
+                    contentDescription = "Calories Icon",
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Total Calories: $totalCalories",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            // Row for Total Steps
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.DirectionsWalk,
+                    contentDescription = "Steps Icon",
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Total Steps: $totalSteps",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+        }
+    }
+
 }
 
 // Data classes for Firestore documents
@@ -386,5 +476,4 @@ data class StepsEntry(
     val timestamp: Timestamp? = null,
     val userId: String = ""
 )
-
 
