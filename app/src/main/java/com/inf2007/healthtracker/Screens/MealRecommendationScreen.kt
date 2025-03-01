@@ -35,6 +35,106 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import com.inf2007.healthtracker.ui.theme.Primary
+import com.google.android.gms.location.LocationServices
+import android.location.Location
+import android.Manifest
+import com.google.android.gms.location.LocationRequest
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.Priority
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun RequestLocationPermission(
+    onPermissionGranted: @Composable () -> Unit
+) {
+    val locationPermissionState = rememberPermissionState(permission = Manifest.permission.ACCESS_FINE_LOCATION)
+
+    when {
+        locationPermissionState.status.isGranted -> {
+            // Permission is granted; display the content that needs location
+            onPermissionGranted()
+        }
+
+        locationPermissionState.status.shouldShowRationale -> {
+            // User denied once, but not permanently ("Don't ask again" not checked)
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text("Location permission is needed to show distances. Please grant permission.")
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { locationPermissionState.launchPermissionRequest() }) {
+                    Text("Allow")
+                }
+            }
+        }
+
+        else -> {
+            // Permission not yet requested OR permanently denied
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text("Grant location permission to see distance.")
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { locationPermissionState.launchPermissionRequest() }) {
+                    Text("Grant Permission")
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Continuously request location updates (live GPS) using a DisposableEffect.
+ * [onLocationUpdated] will be called each time we receive a new location fix.
+ */
+@Composable
+fun StartLocationUpdates(
+    fusedLocationClient: FusedLocationProviderClient,
+    onLocationUpdated: (Location) -> Unit
+) {
+    // Configure interval and priority
+    val locationRequest = remember {
+        LocationRequest.Builder(
+            Priority.PRIORITY_HIGH_ACCURACY,
+            5000 // 5 seconds
+        ).build()
+    }
+
+    // Callback to handle location updates
+    val locationCallback = remember {
+        object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult) {
+                locationResult.lastLocation?.let { loc ->
+                    onLocationUpdated(loc)
+                }
+            }
+        }
+    }
+
+    // Start updates in a DisposableEffect so we can stop them automatically
+    DisposableEffect(Unit) {
+        fusedLocationClient.requestLocationUpdates(
+            locationRequest,
+            locationCallback,
+            android.os.Looper.getMainLooper()
+        )
+
+        onDispose {
+            fusedLocationClient.removeLocationUpdates(locationCallback)
+        }
+    }
+}
+
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,6 +158,14 @@ fun MealRecommendationScreen(
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val firestore = FirebaseFirestore.getInstance()
+
+    val context = LocalContext.current
+    val fusedLocationClient = remember {
+        LocationServices.getFusedLocationProviderClient(context)
+    }
+
+    // Store user’s location
+    var userLocation by remember { mutableStateOf<Location?>(null) }
 
 
     // ✅ Use Gemini AI SDK
@@ -98,6 +206,10 @@ fun MealRecommendationScreen(
                         val parsedYelpResponse =
                             Gson().fromJson(yelpResponse, YelpResponse::class.java)
                         restaurantRecommendations = parsedYelpResponse.businesses
+                        println("DEBUG: Got ${restaurantRecommendations.size} restaurants from Yelp.")
+                        restaurantRecommendations.forEach { business ->
+                            println("DEBUG: ${business.name} => coords=${business.coordinates}")
+                        }
                     } else {
                         errorMessage = "Failed to get restaurant recommendations"
                     }
@@ -129,6 +241,19 @@ fun MealRecommendationScreen(
                 isLoading = false
             }
     }
+
+    // Request location permission and start live location updates if granted
+    RequestLocationPermission(
+        onPermissionGranted = {
+            // Once permission is granted, start requesting continuous updates
+            StartLocationUpdates(
+                fusedLocationClient = fusedLocationClient
+            ) { newLocation ->
+                userLocation = newLocation
+                println("DEBUG: Live location update = $newLocation")
+            }
+        }
+    )
 
 //    LaunchedEffect(showSuccessMessage) {
 //        if (showSuccessMessage) {
@@ -191,7 +316,7 @@ fun MealRecommendationScreen(
                 Text("Nearby Restaurants", style = MaterialTheme.typography.titleMedium)
                 LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp).weight(1f)) {
                     items(restaurantRecommendations) { business ->
-                        RestaurantItem(business)
+                        RestaurantItem(business, userLocation)
                     }
                 }
 
@@ -243,9 +368,22 @@ fun MealRecommendationScreen(
 }
 
 @Composable
-fun RestaurantItem(business: Business) {
+fun RestaurantItem(business: Business, userLocation: Location?) {
     val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) } // Track expanded state
+
+    // Calculate distance if both user location and restaurant coordinates are present
+    val distanceKm = remember(userLocation, business.coordinates) {
+        userLocation?.let { loc ->
+            val lat = business.coordinates?.latitude
+            val lng = business.coordinates?.longitude
+            if (lat != null && lng != null) {
+                calculateDistance(loc, lat, lng)
+            } else null
+        }
+    }
+    println("DEBUG: Business=${business.name}, userLoc=$userLocation, coords=${business.coordinates}, distance=$distanceKm")
+
     val expandedContent = @Composable {
         Column(modifier = Modifier.padding(8.dp)) {
             Text(
@@ -294,8 +432,17 @@ fun RestaurantItem(business: Business) {
                 contentScale = ContentScale.Crop
             )
             Spacer(modifier = Modifier.width(8.dp))
+            // Display business name and distance
+            val distanceText = if (distanceKm != null) {
+                val formattedDistance = String.format(Locale.getDefault(), "%.1f", distanceKm)
+                " ($formattedDistance km)"
+            } else {
+                " (N/A)"  // Show "N/A" if distance is null
+            }
+
+
             Text(
-                text = business.name,
+                text = business.name + distanceText,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
@@ -312,3 +459,20 @@ fun RestaurantItem(business: Business) {
     }
 }
 
+
+fun calculateDistance(
+    userLocation: Location,
+    restaurantLat: Double,
+    restaurantLng: Double
+): Double {
+    val results = FloatArray(1)
+    Location.distanceBetween(
+        userLocation.latitude,
+        userLocation.longitude,
+        restaurantLat,
+        restaurantLng,
+        results
+    )
+    // Convert meters to kilometers
+    return results[0] / 1000.0
+}

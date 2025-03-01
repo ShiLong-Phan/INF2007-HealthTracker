@@ -57,6 +57,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
+    implementation(libs.play.services.location)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -77,7 +78,7 @@ dependencies {
     implementation("androidx.compose.material:material:1.7.8")
     implementation("androidx.compose.material:material-icons-extended:1.3.1")
     implementation("androidx.compose.ui:ui-text-google-fonts:<latest_version>")
-
+    implementation("com.google.accompanist:accompanist-permissions:0.30.1")
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
 
     implementation("com.squareup.okhttp3:okhttp:4.11.0") // Ensure you have the latest version

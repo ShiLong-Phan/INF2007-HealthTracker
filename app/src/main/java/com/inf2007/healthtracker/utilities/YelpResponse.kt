@@ -10,7 +10,13 @@ data class Business(
     val location: Location,
     val image_url: String,
     val phone: String,
-    val price: String
+    val price: String,
+    val coordinates: Coordinates?
+)
+
+data class Coordinates(
+    val latitude: Double?,
+    val longitude: Double?
 )
 
 data class Location(
