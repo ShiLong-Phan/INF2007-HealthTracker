@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Height
 import androidx.compose.material.icons.filled.LocalDrink
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Scale
@@ -43,6 +44,8 @@ import com.inf2007.healthtracker.ui.theme.Secondary
 import com.inf2007.healthtracker.ui.theme.SecondaryContainer
 import com.inf2007.healthtracker.ui.theme.Tertiary
 import com.inf2007.healthtracker.ui.theme.Unfocused
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,12 +70,15 @@ fun ProfileScreen(
     var errorMessage by remember { mutableStateOf("") }
     val context = LocalContext.current
     val user = FirebaseAuth.getInstance().currentUser
+    var steps by remember { mutableStateOf(0) }
 
     val roundedShape = MaterialTheme.shapes.small
 
     // Fetch user data from Firebase
     LaunchedEffect(Unit) {
         user?.let {
+            val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+            val todayString = dateFormat.format(Date())
             FirebaseFirestore.getInstance().collection("users").document(it.uid)
                 .get()
                 .addOnSuccessListener { document ->
@@ -92,6 +98,20 @@ fun ProfileScreen(
                 .addOnFailureListener { exception ->
                     errorMessage = exception.message ?: "Failed to retrieve profile data"
                     isLoading = false
+                }
+
+            FirebaseFirestore.getInstance().collection("steps")
+                .whereEqualTo("userId", user.uid) // ensure your steps documents include a "userId" field
+                .whereEqualTo("dateString", todayString)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) return@addSnapshotListener
+                    if (snapshot != null && !snapshot.isEmpty) {
+                        steps = snapshot.documents.sumOf { doc ->
+                            doc.getLong("steps")?.toInt() ?: 0
+                        }
+                    } else {
+                        steps = 0
+                    }
                 }
         }
     }
@@ -324,6 +344,35 @@ fun ProfileScreen(
 
                                 Text(
                                     text = "$calorieIntake kcal",
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                            // Calculate calories burned using a simple estimation formula
+                            val weightNumber = weight.toDoubleOrNull() ?: 0.0
+                            val caloriesBurned = (steps * weightNumber * 0.0005).toInt()
+                            //Calories burned
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.LocalFireDepartment,
+                                    contentDescription = "Calorie Burned Icon",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                Text(
+                                    text = "Calorie Burned",
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                                )
+
+                                Spacer(modifier = Modifier.weight(1f))  // Pushes the value to the right
+
+                                Text(
+                                    text = "$caloriesBurned kcal",
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                             }
