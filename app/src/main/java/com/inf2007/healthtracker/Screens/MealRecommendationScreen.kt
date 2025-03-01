@@ -38,6 +38,7 @@ import com.inf2007.healthtracker.ui.theme.Primary
 import com.google.android.gms.location.LocationServices
 import android.location.Location
 import android.Manifest
+import android.util.Log
 import com.google.android.gms.location.LocationRequest
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -263,7 +264,7 @@ fun MealRecommendationScreen(
                 fusedLocationClient = fusedLocationClient
             ) { newLocation ->
                 userLocation = newLocation
-                println("DEBUG: Live location update = $newLocation")
+                Log.d("Location Update", "Live location update = $newLocation")
             }
         }
     )
@@ -303,7 +304,6 @@ fun MealRecommendationScreen(
             }
         },
         bottomBar = { BottomNavigationBar(navController) }
-
     ) { paddingValues ->
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -316,20 +316,23 @@ fun MealRecommendationScreen(
         } else {
             Column(modifier = Modifier
                 .padding(paddingValues)
-                .padding(horizontal = 40.dp, vertical = 16.dp)) {
-                Text("Meal Plan", style = MaterialTheme.typography.titleMedium)
-                LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp).weight(1f)) {
-                    items(aiMealPlan) { meal ->
-                        Text("- $meal", style = MaterialTheme.typography.bodyMedium)
+                .padding(horizontal = 16.dp, vertical = 16.dp)) {
+
+                ExpandableCard(title = "Meal Plan") {
+                    LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                        items(aiMealPlan) { meal ->
+                            Text("- $meal", style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text("Nearby Restaurants", style = MaterialTheme.typography.titleMedium)
-                LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp).weight(1f)) {
-                    items(restaurantRecommendations) { business ->
-                        RestaurantItem(business, userLocation)
+                ExpandableCard(title = "Nearby Restaurants") {
+                    LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                        items(restaurantRecommendations) { business ->
+                            RestaurantItem(business, userLocation)
+                        }
                     }
                 }
 
@@ -375,6 +378,46 @@ fun MealRecommendationScreen(
                 ) {
                     Text("Save Meal History")
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun ExpandableCard(
+    title: String,
+    content: @Composable () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+            .clickable { expanded = !expanded },
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column (
+            modifier = Modifier.padding(16.dp) // Add padding inside the card
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ArrowDropDown else Icons.Default.ArrowDropDown,
+                    contentDescription = if (expanded) "Collapse" else "Expand"
+                )
+            }
+            if (expanded) {
+                content()
             }
         }
     }
