@@ -277,11 +277,29 @@ fun DashboardScreen(
                     // Current Weight
                     HealthStatCard(title = "Current Weight", value = "$weight kg", onClick = { navController.navigate("profile_screen") })
                 }
+
+
+
+
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Calculate calories burned using a simple estimation formula
+                val caloriesBurned = (steps * weight * 0.0005).toInt()
+                // Display the calories burned card
+                CaloriesBurnedCard(caloriesBurned)
+
             }
 
             DailyGoalProgress("Steps", steps, dailyStepGoal, "steps")
             DailyGoalProgress("Calories", calorieIntakeToday, dailyCalorieGoal, "kcal")
             DailyGoalProgress("Hydration", hydration, dailyHydrationGoal, "ml")
+
+
 
             // Log Extra Water
             QuickWaterLogging(
@@ -321,6 +339,10 @@ fun DashboardScreen(
                 textAlign = TextAlign.Center
             )
             WeeklyStepsChart(weeklySteps)
+
+
+
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -588,6 +610,25 @@ fun HealthStatCard(title: String, value: String, onClick: (() -> Unit)? = null) 
     }
 }
 
+@Composable
+fun CaloriesBurnedCard(caloriesBurned: Int) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Secondary, contentColor = Color.White),
+        shape = MaterialTheme.shapes.small
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Calories Burned", style = MaterialTheme.typography.titleSmall)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("$caloriesBurned kcal", style = MaterialTheme.typography.titleLarge)
+        }
+    }
+}
+
 // New Sync Button (Styled like other buttons)
 @Composable
 fun SyncNowBtn(user: FirebaseUser, stepCount: Int, stepsRef: DocumentReference) {
@@ -670,5 +711,7 @@ fun AIHealthTipsCard(healthTips: String, isLoading: Boolean) {
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
+
+
 
 
