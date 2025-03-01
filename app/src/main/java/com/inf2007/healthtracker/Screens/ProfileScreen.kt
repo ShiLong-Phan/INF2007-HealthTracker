@@ -708,17 +708,18 @@ fun ProfileScreen(
                             ) {
                                 Text("Activity Level", style = MaterialTheme.typography.bodyLarge)
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-                                    // Sedentary Button
+                                    // Active Button
                                     OutlinedButton(
-                                        onClick = { activityLevel = "Sedentary" },
+                                        onClick = { activityLevel = "Active" },
                                         colors = ButtonDefaults.outlinedButtonColors(
                                             containerColor = MaterialTheme.colorScheme.background,
-                                            contentColor = if (activityLevel == "Sedentary") Primary else Unfocused
+                                            contentColor = if (activityLevel == "Active") Primary else Unfocused
                                         ),
-                                        border = BorderStroke(1.dp, if (activityLevel == "Sedentary") Primary else Unfocused),
+                                        border = BorderStroke(1.dp, if (activityLevel == "Active") Primary else Unfocused),
                                         modifier = Modifier.padding(end = 10.dp)
+
                                     ) {
-                                        Text("Sedentary")
+                                        Text("Active")
                                     }
 
                                     // Moderate Button
@@ -734,16 +735,20 @@ fun ProfileScreen(
                                         Text("Moderate")
                                     }
 
-                                    // Active Button
+
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                                    // Sedentary Button
                                     OutlinedButton(
-                                        onClick = { activityLevel = "Active" },
+                                        onClick = { activityLevel = "Sedentary" },
                                         colors = ButtonDefaults.outlinedButtonColors(
                                             containerColor = MaterialTheme.colorScheme.background,
-                                            contentColor = if (activityLevel == "Active") Primary else Unfocused
+                                            contentColor = if (activityLevel == "Sedentary") Primary else Unfocused
                                         ),
-                                        border = BorderStroke(1.dp, if (activityLevel == "Active") Primary else Unfocused)
+                                        border = BorderStroke(1.dp, if (activityLevel == "Sedentary") Primary else Unfocused),
+                                        modifier = Modifier.padding(end = 10.dp)
                                     ) {
-                                        Text("Active")
+                                        Text("Sedentary")
                                     }
                                 }
                             }
