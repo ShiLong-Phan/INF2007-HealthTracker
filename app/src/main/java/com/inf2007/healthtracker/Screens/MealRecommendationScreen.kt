@@ -193,13 +193,26 @@ fun MealRecommendationScreen(
                 if (searchTerm.isNotEmpty()) {
                     val apiKey = BuildConfig.yelpApiKey
                     val yelpResponse = withContext(Dispatchers.IO) {
-                        YelpApi.searchRestaurants(
-                            location = "Singapore",
-                            term = searchTerm, // ✅ Use mapped search term
-                            categories = "healthy,restaurants", // Restrict search to healthy restaurants
-                            limit = 10,
-                            apiKey = apiKey
-                        )
+                        if (userLocation == null) {
+                            YelpApi.searchRestaurants(
+                                location = "Singapore",
+                                term = searchTerm, // ✅ Use mapped search term
+                                categories = "healthy,restaurants", // Restrict search to healthy restaurants
+                                limit = 10,
+                                apiKey = apiKey
+                            )
+                        } else{
+                            YelpApi.searchRestaurants(
+                                latitude = userLocation!!.latitude,
+                                longitude = userLocation!!.longitude,
+                                location = "Singapore",
+                                term = searchTerm, // ✅ Use mapped search term
+                                categories = "healthy,restaurants", // Restrict search to healthy restaurants
+                                limit = 10,
+                                apiKey = apiKey
+                            )
+                        }
+
                     }
 
                     if (yelpResponse != null) {
@@ -413,48 +426,52 @@ fun RestaurantItem(business: Business, userLocation: Location?) {
         }
     }
 
-    Column(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
             .clickable { expanded = !expanded }, // Toggle expanded state when clicked
-        horizontalAlignment = Alignment.Start
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(8.dp),
+            horizontalAlignment = Alignment.Start
         ) {
-            AsyncImage(
-                model = business.image_url,
-                contentDescription = business.name,
-                modifier = Modifier
-                    .size(80.dp)
-                    .padding(4.dp),
-                contentScale = ContentScale.Crop
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            // Display business name and distance
-            val distanceText = if (distanceKm != null) {
-                val formattedDistance = String.format(Locale.getDefault(), "%.1f", distanceKm)
-                " ($formattedDistance km)"
-            } else {
-                " (N/A)"  // Show "N/A" if distance is null
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AsyncImage(
+                    model = business.image_url,
+                    contentDescription = business.name,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .padding(4.dp),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                // Display business name and distance
+                val distanceText = if (distanceKm != null) {
+                    val formattedDistance = String.format(Locale.getDefault(), "%.1f", distanceKm)
+                    " ($formattedDistance km)"
+                } else {
+                    " (N/A)"  // Show "N/A" if distance is null
+                }
+
+                Text(
+                    text = business.name + distanceText,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ArrowDropDown else Icons.Default.ArrowDropDown,
+                    contentDescription = if (expanded) "Collapse" else "Expand"
+                )
             }
 
-
-            Text(
-                text = business.name + distanceText,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f)
-            )
-            Icon(
-                imageVector = if (expanded) Icons.Default.ArrowDropDown else Icons.Default.ArrowDropDown,
-                contentDescription = if (expanded) "Collapse" else "Expand"
-            )
-        }
-
-        // Show more details if expanded
-        if (expanded) {
-            expandedContent()
+            // Show more details if expanded
+            if (expanded) {
+                expandedContent()
+            }
         }
     }
 }

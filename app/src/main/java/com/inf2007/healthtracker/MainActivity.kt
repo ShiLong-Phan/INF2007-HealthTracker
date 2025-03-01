@@ -46,7 +46,9 @@ class MainActivity : ComponentActivity() {
             Manifest.permission.ACCESS_NETWORK_STATE,
             Manifest.permission.WAKE_LOCK,
             Manifest.permission.SCHEDULE_EXACT_ALARM,
-            Manifest.permission.USE_EXACT_ALARM
+            Manifest.permission.USE_EXACT_ALARM,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
         )
 
         val permissionsToRequest = permissions.filter {
