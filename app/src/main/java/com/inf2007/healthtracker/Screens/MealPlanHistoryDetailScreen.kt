@@ -131,11 +131,8 @@ fun MealPlanHistoryDetailScreen(
     ) { paddingValues ->
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.Start
-        ) {
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp, vertical = 16.dp)) {
             when {
                 isLoading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -158,36 +155,31 @@ fun MealPlanHistoryDetailScreen(
 
                         // Header Row: "Meals:" and the button on the far right.
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 40.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Meal Plan", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                text = "Meals:",
+                                style = MaterialTheme.typography.titleMedium
+                            )
                             Button(
                                 onClick = {
                                     saveMeals(mealInputState, history) {
                                         isSaved = true
-                                        // Also update originalMeals to reflect saved state.
-                                        originalMeals.clear()
-                                        originalMeals.addAll(updatedMeals)
                                     }
                                 },
-                                enabled = hasEdits && !isSaved,
-                                modifier = Modifier.size(80.dp, 32.dp),
-                                shape = MaterialTheme.shapes.small
+                                enabled = hasEdits && !isSaved
                             ) {
-                                Box(modifier = Modifier.fillMaxSize().offset(y = (0).dp), contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = buttonText,
-                                        style = MaterialTheme.typography.bodySmall.copy(color = Color.White)
-                                    )
-                                }
+                                Text(buttonText)
                             }
                         }
 
-                        // Editable Meal List using itemsIndexed for stability.
-                        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                            LazyColumn(modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp)) {
+                        // Expandable Card for Meals
+                        ExpandableCard(title = "Meals") {
+                            LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
                                 itemsIndexed(updatedMeals) { index, meal ->
                                     EditableMealItem(
                                         meal = meal,
@@ -204,11 +196,12 @@ fun MealPlanHistoryDetailScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Restaurant List Section with Images
-                        Text("Nearby Restaurants", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 40.dp))
-                        LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 40.dp)) {
-                            items(history.restaurants) { restaurant ->
-                                RestaurantItem(restaurant)
+                        // Expandable Card for Restaurants
+                        ExpandableCard(title = "Nearby Restaurants") {
+                            LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                                items(history.restaurants) { restaurant ->
+                                    RestaurantItem(restaurant)
+                                }
                             }
                         }
                     }
