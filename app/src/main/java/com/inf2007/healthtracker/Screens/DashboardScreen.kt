@@ -44,10 +44,15 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.remember
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import com.inf2007.healthtracker.BuildConfig
@@ -57,6 +62,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import org.json.JSONObject
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,6 +81,8 @@ fun DashboardScreen(
     var desiredSteps by remember { mutableStateOf(0) }
     var desiredHydration by remember { mutableStateOf(0) }
     var foodEntries by remember { mutableStateOf<List<FoodEntry>>(emptyList()) }
+    var weeklyDates by remember { mutableStateOf(emptyList<String>()) }
+
 
     // ---------------------------
     // New states for date selection:
@@ -144,6 +152,50 @@ fun DashboardScreen(
                         steps = 0
                     }
                 }
+
+            // Prepare a list of dateString values for the past 7 days
+            val dateFormatterNew = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+            val calendarNew = Calendar.getInstance().apply {
+                time = Date()
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            // Build the past 7 dates list without reusing the same instance
+            val past7Dates = (0 until 7).map {
+                val clonedCal = calendarNew.clone() as Calendar
+                clonedCal.add(Calendar.DAY_OF_MONTH, -it)
+                dateFormatterNew.format(clonedCal.time)
+            }
+            // Reverse to have chronological order (oldest first)
+            val queryDates = past7Dates.reversed()
+            weeklyDates = queryDates  // update the state
+
+            FirebaseFirestore.getInstance().collection("steps")
+                .whereEqualTo("userId", user.uid)
+                .whereIn("dateString", queryDates)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.e("WeeklySteps", "Error fetching weekly steps: ${error.message}")
+                        return@addSnapshotListener
+                    }
+                    // Initialize a map with all queryDates set to 0 steps
+                    val stepsMap = queryDates.associateWith { 0 }.toMutableMap()
+                    snapshot?.documents?.forEach { doc ->
+                        val docDate = doc.getString("dateString")
+                        val stepsValue = doc.getLong("steps")?.toInt() ?: 0
+                        if (docDate != null) {
+                            stepsMap[docDate] = (stepsMap[docDate] ?: 0) + stepsValue
+                        }
+                    }
+                    // Create a list of steps ordered by queryDates
+                    weeklySteps = queryDates.map { date -> stepsMap[date] ?: 0 }
+                    Log.d("WeeklySteps", "Weekly steps: $weeklySteps")
+                }
+
+
+
         }
     }
 
@@ -338,8 +390,8 @@ fun DashboardScreen(
                 style = MaterialTheme.typography.titleLarge,
                 textAlign = TextAlign.Center
             )
-            WeeklyStepsChart(weeklySteps)
 
+            WeeklyStepsLineGraphWithAxes(weeklySteps, weeklyDates)
 
 
 
@@ -388,6 +440,7 @@ fun DashboardScreen(
             AIHealthTipsCard(healthTips = healthTips, isLoading = isLoading)
 
             Spacer(modifier = Modifier.height(16.dp))
+
         }
     }
 }
@@ -459,20 +512,166 @@ fun DailyGoalProgress(statLabel: String, currentValue: Int, goalValue: Int, unit
 /**
  * A very basic placeholder 'chart' for weekly steps.
  */
+
+
 @Composable
-fun WeeklyStepsChart(weeklyData: List<Int>) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        weeklyData.forEach { daySteps ->
-            val fraction = min(daySteps / 10000f, 1f)
-            Box(
-                modifier = Modifier
-                    .width(20.dp)
-                    .height((100 * fraction).dp)
-                    .background(Secondary)
+fun WeeklyStepsLineGraphWithAxes(
+    weeklySteps: List<Int>,
+    dateLabels: List<String>
+) {
+    // State to control whether the axes should be visible
+    var showAxes by remember { mutableStateOf(false) }
+    // After 3 seconds, set showAxes to true
+    LaunchedEffect(Unit) {
+        delay(1500)
+        showAxes = true
+    }
+
+    // Compute min/max from the data
+    val maxSteps = (weeklySteps.maxOrNull() ?: 0).coerceAtLeast(1)
+    val minSteps = weeklySteps.minOrNull() ?: 0
+    val range = (maxSteps - minSteps).coerceAtLeast(1)
+
+    // Axis spacing
+    val leftPaddingPx = 60f    // space for y-axis labels
+    val bottomPaddingPx = 40f  // space for x-axis labels
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    // Number of horizontal "ticks" for the y-axis
+    val labelCount = 5
+    // Calculate the step increment for each label
+    val stepIncrement = (range / (labelCount - 1)).coerceAtLeast(1)
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp)
+    ) {
+        // The usable chart area is reduced by our left/bottom padding
+        val chartWidth = size.width - leftPaddingPx
+        val chartHeight = size.height - bottomPaddingPx
+
+        // Conditionally draw the axes lines and y-axis labels
+        if (showAxes) {
+            // Draw the Y-axis line
+            drawLine(
+                color = Color.Black,
+                start = Offset(x = leftPaddingPx, y = 0f),
+                end = Offset(x = leftPaddingPx, y = chartHeight),
+                strokeWidth = 2f
             )
+
+            // Draw the X-axis line
+            drawLine(
+                color = Color.Black,
+                start = Offset(x = leftPaddingPx, y = chartHeight),
+                end = Offset(x = leftPaddingPx + chartWidth, y = chartHeight),
+                strokeWidth = 2f
+            )
+
+            // Draw Y-axis labels and ticks
+            for (i in 0 until labelCount) {
+                val labelValue = minSteps + i * stepIncrement
+                val fraction = (labelValue - minSteps) / range.toFloat()
+                // Y coordinate (invert fraction because (0,0) is top-left)
+                val yCoord = chartHeight * (1 - fraction)
+
+                // Draw a small horizontal tick on the y-axis
+                drawLine(
+                    color = Color.Black,
+                    start = Offset(x = leftPaddingPx - 5f, y = yCoord),
+                    end = Offset(x = leftPaddingPx, y = yCoord),
+                    strokeWidth = 2f
+                )
+
+                // Draw the label text to the left of the y-axis
+                drawContext.canvas.nativeCanvas.apply {
+                    drawText(
+                        labelValue.toString(),
+                        leftPaddingPx - 10f, // a bit to the left of the tick
+                        yCoord + 8f,         // shift down for better centering
+                        android.graphics.Paint().apply {
+                            textSize = 32f
+                            textAlign = android.graphics.Paint.Align.RIGHT
+                            color = android.graphics.Color.BLACK
+                        }
+                    )
+                }
+            }
+        }
+
+        // Calculate each data point's (x, y) within the chart area
+        val spacing = if (weeklySteps.size > 1) {
+            chartWidth / (weeklySteps.size - 1)
+        } else {
+            chartWidth
+        }
+        val points = weeklySteps.mapIndexed { index, stepsValue ->
+            val fraction = (stepsValue - minSteps) / range.toFloat()
+            val x = leftPaddingPx + index * spacing
+            val y = chartHeight * (1 - fraction)
+            Offset(x, y)
+        }
+
+        // Draw the data line between consecutive points
+        for (i in 0 until points.size - 1) {
+            drawLine(
+                color = primaryColor,
+                start = points[i],
+                end = points[i + 1],
+                strokeWidth = 4f
+            )
+        }
+
+        // Draw circles at each data point
+        points.forEach { point ->
+            drawCircle(
+                color = primaryColor,
+                radius = 6f,
+                center = point
+            )
+        }
+
+        // Conditionally draw X-axis labels (day only) under each point
+        if (showAxes) {
+            points.forEachIndexed { index, point ->
+                val dateLabel = dateLabels.getOrNull(index) ?: ""
+                // Extract only the day (e.g., "28") from "Feb 28, 2025"
+                val day = try {
+                    val parsedDate = SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).parse(dateLabel)
+                    SimpleDateFormat("d", Locale.getDefault()).format(parsedDate)
+                } catch (e: Exception) {
+                    dateLabel // fallback if parsing fails
+                }
+
+                // Place the text slightly below the x-axis
+                drawContext.canvas.nativeCanvas.apply {
+                    drawText(
+                        day,
+                        point.x,
+                        chartHeight + 30f, // below the x-axis line
+                        android.graphics.Paint().apply {
+                            textSize = 32f
+                            color = android.graphics.Color.BLACK
+                            textAlign = android.graphics.Paint.Align.CENTER
+                        }
+                    )
+                }
+            }
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
 
 /**
  * Buttons for quick water intake logging: +250 ml, +500 ml, +1000 ml, and Reset.
@@ -500,7 +699,7 @@ fun QuickWaterLogging(
             Button(
                 onClick = onResetWater,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = colorScheme.background,
                     contentColor = Tertiary
                 ),
                 contentPadding = PaddingValues(0.dp)
@@ -524,7 +723,7 @@ fun QuickWaterLogging(
             OutlinedButton(
                 onClick = { onLogWater(250) },
                 colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = colorScheme.background,
                     contentColor = Unfocused
                 ),
                 border = BorderStroke(1.dp, Unfocused),
@@ -544,7 +743,7 @@ fun QuickWaterLogging(
             OutlinedButton(
                 onClick = { onLogWater(500) },
                 colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = colorScheme.background,
                     contentColor = Unfocused
                 ),
                 border = BorderStroke(1.dp, Unfocused),
@@ -564,7 +763,7 @@ fun QuickWaterLogging(
             OutlinedButton(
                 onClick = { onLogWater(1000) },
                 colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = colorScheme.background,
                     contentColor = Unfocused
                 ),
                 border = BorderStroke(1.dp, Unfocused),
@@ -636,7 +835,7 @@ fun SyncNowBtn(user: FirebaseUser, stepCount: Int, stepsRef: DocumentReference) 
         onClick = { syncStepsToFirestore(user, stepCount.toLong(), stepsRef) },
         colors = ButtonDefaults.buttonColors(
             containerColor = Primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
+            contentColor = colorScheme.onPrimary
         ),
         shape = MaterialTheme.shapes.small,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(56.dp)
@@ -656,7 +855,7 @@ fun CaptureFoodBtn(navController: NavController) {
         shape = MaterialTheme.shapes.small,
         colors = ButtonDefaults.buttonColors(
             containerColor = Primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
+            contentColor = colorScheme.onPrimary
         ),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(56.dp)
     ) {
