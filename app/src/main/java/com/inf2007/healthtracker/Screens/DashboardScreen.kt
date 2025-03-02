@@ -83,7 +83,6 @@ fun DashboardScreen(
     var foodEntries by remember { mutableStateOf<List<FoodEntry>>(emptyList()) }
     var weeklyDates by remember { mutableStateOf(emptyList<String>()) }
 
-
     // ---------------------------
     // New states for date selection:
     var selectedDate by remember { mutableStateOf(Date()) }
@@ -193,12 +192,8 @@ fun DashboardScreen(
                     weeklySteps = queryDates.map { date -> stepsMap[date] ?: 0 }
                     Log.d("WeeklySteps", "Weekly steps: $weeklySteps")
                 }
-
-
-
         }
     }
-
 
     // ---------------------------
     // Query for food entries list based on selected date:
@@ -329,29 +324,22 @@ fun DashboardScreen(
                     // Current Weight
                     HealthStatCard(title = "Current Weight", value = "$weight kg", onClick = { navController.navigate("profile_screen") })
                 }
-
-
-
-
             }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Calculate calories burned using a simple estimation formula
-                val caloriesBurned = (steps * weight * 0.0005).toInt()
-                // Display the calories burned card
-                CaloriesBurnedCard(caloriesBurned)
 
+            val caloriesBurned = (steps * weight * 0.0005).toInt()
+
+            Box(
+                modifier = Modifier.wrapContentWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CaloriesBurnedCard(
+                    caloriesBurned = caloriesBurned,
+                )
             }
 
             DailyGoalProgress("Steps", steps, dailyStepGoal, "steps")
             DailyGoalProgress("Calories", calorieIntakeToday, dailyCalorieGoal, "kcal")
             DailyGoalProgress("Hydration", hydration, dailyHydrationGoal, "ml")
-
-
 
             // Log Extra Water
             QuickWaterLogging(
@@ -392,9 +380,6 @@ fun DashboardScreen(
             )
 
             WeeklyStepsLineGraphWithAxes(weeklySteps, weeklyDates)
-
-
-
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -444,8 +429,6 @@ fun DashboardScreen(
         }
     }
 }
-
-
 
 /**
  * Data class for a food entry document in Firestore.
@@ -510,10 +493,8 @@ fun DailyGoalProgress(statLabel: String, currentValue: Int, goalValue: Int, unit
 }
 
 /**
- * A very basic placeholder 'chart' for weekly steps.
+ * A basic placeholder 'chart' for weekly steps.
  */
-
-
 @Composable
 fun WeeklyStepsLineGraphWithAxes(
     weeklySteps: List<Int>,
@@ -662,17 +643,6 @@ fun WeeklyStepsLineGraphWithAxes(
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Buttons for quick water intake logging: +250 ml, +500 ml, +1000 ml, and Reset.
  */
@@ -812,18 +782,33 @@ fun HealthStatCard(title: String, value: String, onClick: (() -> Unit)? = null) 
 @Composable
 fun CaloriesBurnedCard(caloriesBurned: Int) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
         colors = CardDefaults.cardColors(containerColor = Secondary, contentColor = Color.White),
         shape = MaterialTheme.shapes.small
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
-            Text("Calories Burned", style = MaterialTheme.typography.titleSmall)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text("$caloriesBurned kcal", style = MaterialTheme.typography.titleLarge)
+            Column(
+                modifier = Modifier.padding(16.dp).fillMaxWidth().fillMaxHeight(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    "Calories Burned",
+                    style = MaterialTheme.typography.titleSmall,
+                    textAlign = TextAlign.Center,
+                    color = SecondaryContainer
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "$caloriesBurned kcal",
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                    color = Color.White
+                )
+            }
         }
     }
 }
@@ -910,7 +895,3 @@ fun AIHealthTipsCard(healthTips: String, isLoading: Boolean) {
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
-
-
-
-
