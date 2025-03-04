@@ -16,5 +16,6 @@ data class Restaurant(
     val address: String = "",
     val phone: String = "",
     val rating: Double = 0.0,
-    val price: String = ""
+    val price: String = "",
+    val coordinates: Coordinates? = null
 )

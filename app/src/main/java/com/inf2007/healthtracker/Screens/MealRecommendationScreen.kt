@@ -39,6 +39,7 @@ import com.google.android.gms.location.LocationServices
 import android.location.Location
 import android.Manifest
 import android.util.Log
+import androidx.compose.ui.res.painterResource
 import com.google.android.gms.location.LocationRequest
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -48,6 +49,8 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.Priority
+import com.inf2007.healthtracker.R
+import com.inf2007.healthtracker.utilities.calculateDistance
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -330,7 +333,7 @@ fun MealRecommendationScreen(
 
                 ExpandableCard(title = "Nearby Restaurants") {
                     LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                        items(restaurantRecommendations) { business ->
+                        items(restaurantRecommendations.filter { it.name.trim() != "-" }) { business ->
                             RestaurantItem(business, userLocation)
                         }
                     }
@@ -353,7 +356,10 @@ fun MealRecommendationScreen(
                                         "address" to business.location.address1,
                                         "rating" to business.rating,
                                         "phone" to business.phone,
-                                        "price" to business.price
+                                        "price" to business.price,
+                                        "coordinates" to business.coordinates?.let { coords ->
+                                            mapOf("latitude" to coords.latitude, "longitude" to coords.longitude)
+                                        }
                                     )
                                 }
                             )
@@ -484,7 +490,10 @@ fun RestaurantItem(business: Business, userLocation: Location?) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AsyncImage(
-                    model = business.image_url,
+                    model = if (business.image_url.isEmpty()) null else business.image_url,
+                    placeholder = painterResource(id = R.drawable.default_restaurant),
+                    error = painterResource(id = R.drawable.default_restaurant),
+                    fallback = painterResource(id = R.drawable.default_restaurant),
                     contentDescription = business.name,
                     modifier = Modifier
                         .size(80.dp)
@@ -519,20 +528,3 @@ fun RestaurantItem(business: Business, userLocation: Location?) {
     }
 }
 
-
-fun calculateDistance(
-    userLocation: Location,
-    restaurantLat: Double,
-    restaurantLng: Double
-): Double {
-    val results = FloatArray(1)
-    Location.distanceBetween(
-        userLocation.latitude,
-        userLocation.longitude,
-        restaurantLat,
-        restaurantLng,
-        results
-    )
-    // Convert meters to kilometers
-    return results[0] / 1000.0
-}

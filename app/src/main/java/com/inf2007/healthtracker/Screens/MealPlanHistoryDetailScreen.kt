@@ -1,7 +1,9 @@
 package com.inf2007.healthtracker.Screens
 
 import android.content.Intent
+import android.location.Location
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,18 +20,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.google.android.gms.location.LocationServices
 import com.google.firebase.firestore.FirebaseFirestore
+import com.inf2007.healthtracker.R
 import com.inf2007.healthtracker.ui.theme.Primary
 import com.inf2007.healthtracker.utilities.BottomNavigationBar
+import com.inf2007.healthtracker.utilities.Coordinates
 import com.inf2007.healthtracker.utilities.MealHistory
 import com.inf2007.healthtracker.utilities.Restaurant
 import java.text.SimpleDateFormat
 import java.util.*
+import com.inf2007.healthtracker.utilities.calculateDistance
+import com.inf2007.healthtracker.utilities.RequestLocationPermission
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,6 +61,24 @@ fun MealPlanHistoryDetailScreen(
 
     val firestore = FirebaseFirestore.getInstance()
 
+    // Obtain location updates for calculating distance.
+    val context = LocalContext.current
+    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+    var userLocation by remember { mutableStateOf<Location?>(null) }
+
+    // Request location permission and start live location updates if granted
+    RequestLocationPermission(
+        onPermissionGranted = {
+            // Once permission is granted, start requesting continuous updates
+            StartLocationUpdates(
+                fusedLocationClient = fusedLocationClient
+            ) { newLocation ->
+                userLocation = newLocation
+                Log.d("Location Update", "Live location update = $newLocation")
+            }
+        }
+    )
+
     LaunchedEffect(Unit) {
         firestore.collection("mealHistory")
             .whereEqualTo("uid", uid)
@@ -69,7 +96,20 @@ fun MealPlanHistoryDetailScreen(
                         val rating = map["rating"] as? Double ?: 0.0
                         val phone = map["phone"] as? String ?: "Not Available"
                         val price = map["price"] as? String ?: "Not Available"
-                        Restaurant(name = name, imageUrl = imageUrl, address = address, rating = rating, price = price, phone = phone)
+                        // Parse coordinates if available
+                        val coordinatesMap = map["coordinates"] as? Map<String, Any>
+                        val latitude = coordinatesMap?.get("latitude") as? Double
+                        val longitude = coordinatesMap?.get("longitude") as? Double
+                        val coordinates = if (latitude != null && longitude != null) Coordinates(latitude, longitude) else null
+                        Restaurant(
+                            name = name,
+                            imageUrl = imageUrl,
+                            address = address,
+                            rating = rating,
+                            price = price,
+                            phone = phone,
+                            coordinates = coordinates
+                        )
                     }
                     mealHistory = MealHistory(
                         uid = uid,
@@ -132,7 +172,8 @@ fun MealPlanHistoryDetailScreen(
         Column(
             modifier = Modifier
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 16.dp)) {
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+        ) {
             when {
                 isLoading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -199,8 +240,9 @@ fun MealPlanHistoryDetailScreen(
                         // Expandable Card for Restaurants
                         ExpandableCard(title = "Nearby Restaurants") {
                             LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                                items(history.restaurants) { restaurant ->
-                                    RestaurantItem(restaurant)
+                                items(history.restaurants.filter { it.name.trim() != "-" }) { restaurant ->
+                                    // Pass the current userLocation to RestaurantItem
+                                    RestaurantItem(restaurant, userLocation)
                                 }
                             }
                         }
@@ -219,7 +261,9 @@ fun EditableMealItem(
     var mealText by remember { mutableStateOf(meal) }
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         BasicTextField(
@@ -234,7 +278,6 @@ fun EditableMealItem(
     }
 }
 
-// Modify saveMeals to accept a callback for onSuccess.
 fun saveMeals(mealInputState: Map<Int, String>, history: MealHistory, onSuccess: () -> Unit) {
     val updatedMealData = hashMapOf(
         "meals" to mealInputState.toSortedMap().values.toList()
@@ -252,16 +295,39 @@ fun saveMeals(mealInputState: Map<Int, String>, history: MealHistory, onSuccess:
 }
 
 @Composable
-fun RestaurantItem(restaurant: Restaurant) {
+fun RestaurantItem(restaurant: Restaurant, userLocation: Location?) {
     val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
 
+    // Compute the distance (in kilometers) if both userLocation and restaurant coordinates are available.
+    val distanceKm = remember(userLocation, restaurant.coordinates) {
+        userLocation?.let { loc ->
+            restaurant.coordinates?.let { coords ->
+                val d = calculateDistance(userLocation, coords.latitude, coords.longitude)
+                println("DEBUG: Distance computed: $d km")
+                d
+            }
+        }
+    }
+
     val expandedContent = @Composable {
         Column(modifier = Modifier.padding(8.dp)) {
-            Text(text = "Address: ${restaurant.address ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
-            Text(text = "Phone: ${restaurant.phone?.takeIf { it.isNotBlank() } ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
-            Text(text = "Rating: ${if(restaurant.rating == 0.0) "Not Available" else "${restaurant.rating} / 5"}", style = MaterialTheme.typography.bodyMedium)
-            Text(text = "Price: ${restaurant.price?.takeIf { it.isNotBlank() } ?: "Not Available"}", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = "Address: ${restaurant.address.ifEmpty { "Not Available" }}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = "Phone: ${restaurant.phone.takeIf { it.isNotBlank() } ?: "Not Available"}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = "Rating: ${if (restaurant.rating == 0.0) "Not Available" else "${restaurant.rating} / 5"}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = "Price: ${restaurant.price.takeIf { it.isNotBlank() } ?: "Not Available"}",
+                style = MaterialTheme.typography.bodyMedium
+            )
             Text(
                 text = "Click Here to Open in Google Maps",
                 style = MaterialTheme.typography.bodyMedium.copy(
@@ -288,7 +354,10 @@ fun RestaurantItem(restaurant: Restaurant) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
-                model = restaurant.imageUrl,
+                model = if (restaurant.imageUrl.isEmpty()) null else restaurant.imageUrl,
+                placeholder = painterResource(id = R.drawable.default_restaurant),
+                error = painterResource(id = R.drawable.default_restaurant),
+                fallback = painterResource(id = R.drawable.default_restaurant),
                 contentDescription = restaurant.name,
                 modifier = Modifier
                     .size(80.dp)
@@ -296,8 +365,10 @@ fun RestaurantItem(restaurant: Restaurant) {
                 contentScale = ContentScale.Crop
             )
             Spacer(modifier = Modifier.width(8.dp))
+            // Append distance (if available) to the restaurant name.
+            val distanceText = if (distanceKm != null) " (${String.format("%.1f", distanceKm)} km)" else "(N/A)"
             Text(
-                text = restaurant.name,
+                text = restaurant.name + distanceText,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
