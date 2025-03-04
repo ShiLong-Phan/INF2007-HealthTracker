@@ -317,73 +317,83 @@ fun MealRecommendationScreen(
                 Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
             }
         } else {
-            Column(modifier = Modifier
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 16.dp)) {
-
-                ExpandableCard(title = "Meal Plan") {
-                    LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                        items(aiMealPlan) { meal ->
-                            Text("- $meal", style = MaterialTheme.typography.bodyMedium)
+            LazyColumn(
+                modifier = Modifier
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+            ) {
+                // Meal Plan Section
+                item {
+                    ExpandableCard(title = "Meal Plan") {
+                        Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                            aiMealPlan.forEach { meal ->
+                                Text("- $meal", style = MaterialTheme.typography.bodyMedium)
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                ExpandableCard(title = "Nearby Restaurants") {
-                    LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                        items(restaurantRecommendations.filter { it.name.trim() != "-" }) { business ->
-                            RestaurantItem(business, userLocation)
+                // Nearby Restaurants Section
+                item {
+                    ExpandableCard(title = "Nearby Restaurants") {
+                        Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                            restaurantRecommendations.filter { it.name.trim() != "-" }.forEach { business ->
+                                RestaurantItem(business, userLocation)
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Button(
-                    onClick = {
-                        val user = FirebaseAuth.getInstance().currentUser
-                        user?.let {
-                            val mealHistoryData = hashMapOf(
-                                "uid" to it.uid,
-                                "date" to Date(),
-                                "meals" to aiMealPlan,
-                                "restaurants" to restaurantRecommendations.map { business ->
-                                    mapOf(
-                                        "name" to business.name,
-                                        "imageUrl" to business.image_url,
-                                        "address" to business.location.address1,
-                                        "rating" to business.rating,
-                                        "phone" to business.phone,
-                                        "price" to business.price,
-                                        "coordinates" to business.coordinates?.let { coords ->
-                                            mapOf("latitude" to coords.latitude, "longitude" to coords.longitude)
+                item {
+                    Button(
+                        onClick = {
+                            val user = FirebaseAuth.getInstance().currentUser
+                            user?.let {
+                                val mealHistoryData = hashMapOf(
+                                    "uid" to it.uid,
+                                    "date" to Date(),
+                                    "meals" to aiMealPlan,
+                                    "restaurants" to restaurantRecommendations.map { business ->
+                                        mapOf(
+                                            "name" to business.name,
+                                            "imageUrl" to business.image_url,
+                                            "address" to business.location.address1,
+                                            "rating" to business.rating,
+                                            "phone" to business.phone,
+                                            "price" to business.price,
+                                            "coordinates" to business.coordinates?.let { coords ->
+                                                mapOf(
+                                                    "latitude" to coords.latitude,
+                                                    "longitude" to coords.longitude
+                                                )
+                                            }
+                                        )
+                                    },
+                                    "calorieGoal" to calorieIntake
+                                )
+                                firestore.collection("mealHistory")
+                                    .add(mealHistoryData)
+                                    .addOnSuccessListener {
+                                        showSuccessMessage = true
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Meal history saved successfully!")
                                         }
-                                    )
-                                },
-                                "calorieGoal" to calorieIntake
-                            )
-                            firestore.collection("mealHistory")
-                                .add(mealHistoryData)
-                                .addOnSuccessListener {
-                                    showSuccessMessage = true
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Meal history saved successfully!")
                                     }
-                                }
-                                .addOnFailureListener { e ->
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Failed to save meal history: ${e.message}")
+                                    .addOnFailureListener { e ->
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Failed to save meal history: ${e.message}")
+                                        }
                                     }
-                                }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = MaterialTheme.shapes.small,
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                ) {
-                    Text("Save Meal History")
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = MaterialTheme.shapes.small,
+                        colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    ) {
+                        Text("Save Meal History")
+                    }
                 }
             }
         }

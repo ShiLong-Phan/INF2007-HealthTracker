@@ -169,80 +169,96 @@ fun MealPlanHistoryDetailScreen(
         },
         bottomBar = { BottomNavigationBar(navController) }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 16.dp)
-        ) {
-            when {
-                isLoading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+        when {
+            isLoading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
-                errorMessage.isNotEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
-                    }
+            }
+            errorMessage.isNotEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
                 }
-                else -> {
-                    mealHistory?.let { history ->
-                        Text(
-                            text = "Date: ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(history.date)}",
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.padding(horizontal = 40.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Header Row: "Meals:" and the button on the far right.
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 40.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+            }
+            else -> {
+                // Use LazyColumn as the root container
+                LazyColumn(
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .padding(horizontal = 16.dp, vertical = 16.dp)
+                ) {
+                    // Date Section
+                    item {
+                        mealHistory?.let { history ->
                             Text(
-                                text = "Meals:",
-                                style = MaterialTheme.typography.titleMedium
+                                text = "Date: ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(history.date)}",
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.padding(horizontal = 40.dp)
                             )
-                            Button(
-                                onClick = {
-                                    saveMeals(mealInputState, history) {
-                                        isSaved = true
-                                    }
-                                },
-                                enabled = hasEdits && !isSaved
-                            ) {
-                                Text(buttonText)
-                            }
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
+                    }
 
-                        // Expandable Card for Meals
-                        ExpandableCard(title = "Meals") {
-                            LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                                itemsIndexed(updatedMeals) { index, meal ->
-                                    EditableMealItem(
-                                        meal = meal,
-                                        onMealChange = { updatedMeal ->
-                                            updatedMeals[index] = updatedMeal
-                                            mealInputState[index] = updatedMeal
-                                            // Any change resets the saved state.
-                                            isSaved = false
+                    // Header Row: "Meals:" and the button on the far right.
+                    item {
+                        mealHistory?.let { history ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 40.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Meals:",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Button(
+                                    onClick = {
+                                        saveMeals(mealInputState, history) {
+                                            isSaved = true
                                         }
-                                    )
+                                    },
+                                    enabled = hasEdits && !isSaved
+                                ) {
+                                    Text(buttonText)
                                 }
                             }
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
+                    }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                    // Expandable Card for Meals
+                    item {
+                        mealHistory?.let { history ->
+                            ExpandableCard(title = "Meals") {
+                                // Replace LazyColumn with Column
+                                Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                                    updatedMeals.forEachIndexed { index, meal ->
+                                        EditableMealItem(
+                                            meal = meal,
+                                            onMealChange = { updatedMeal ->
+                                                updatedMeals[index] = updatedMeal
+                                                mealInputState[index] = updatedMeal
+                                                isSaved = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
 
-                        // Expandable Card for Restaurants
-                        ExpandableCard(title = "Nearby Restaurants") {
-                            LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                                items(history.restaurants.filter { it.name.trim() != "-" }) { restaurant ->
-                                    // Pass the current userLocation to RestaurantItem
-                                    RestaurantItem(restaurant, userLocation)
+                    // Expandable Card for Restaurants
+                    item {
+                        mealHistory?.let { history ->
+                            ExpandableCard(title = "Nearby Restaurants") {
+                                // Replace LazyColumn with Column
+                                Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                                    history.restaurants.filter { it.name.trim() != "-" }.forEach { restaurant ->
+                                        RestaurantItem(restaurant, userLocation)
+                                    }
                                 }
                             }
                         }
