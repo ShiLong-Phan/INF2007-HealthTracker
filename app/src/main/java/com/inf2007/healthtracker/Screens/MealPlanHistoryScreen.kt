@@ -273,9 +273,10 @@ fun MealHistoryItem(navController: NavController, history: MealHistory) {
                     style = MaterialTheme.typography.bodyLarge
                 )
 
-                // Restaurants
+                // Restaurants (excluding restaurants with name "-")
+                val validRestaurants = history.restaurants.filter { it.name.trim() != "-" }
                 Text(
-                    text = "Restaurants: ${history.restaurants.size} places",
+                    text = "Restaurants: ${validRestaurants.size} places",
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
