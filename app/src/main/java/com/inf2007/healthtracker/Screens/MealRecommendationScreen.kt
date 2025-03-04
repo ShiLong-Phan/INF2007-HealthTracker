@@ -506,7 +506,7 @@ fun RestaurantItem(business: Business, userLocation: Location?) {
                     val formattedDistance = String.format(Locale.getDefault(), "%.1f", distanceKm)
                     " ($formattedDistance km)"
                 } else {
-                    " (N/A)"  // Show "N/A" if distance is null
+                    ""  // Show "N/A" if distance is null
                 }
 
                 Text(

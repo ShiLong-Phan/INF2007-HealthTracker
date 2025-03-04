@@ -366,7 +366,7 @@ fun RestaurantItem(restaurant: Restaurant, userLocation: Location?) {
             )
             Spacer(modifier = Modifier.width(8.dp))
             // Append distance (if available) to the restaurant name.
-            val distanceText = if (distanceKm != null) " (${String.format("%.1f", distanceKm)} km)" else "(N/A)"
+            val distanceText = if (distanceKm != null) " (${String.format("%.1f", distanceKm)} km)" else ""
             Text(
                 text = restaurant.name + distanceText,
                 style = MaterialTheme.typography.bodyLarge,
