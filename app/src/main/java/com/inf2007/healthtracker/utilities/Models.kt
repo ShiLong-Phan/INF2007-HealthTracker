@@ -7,7 +7,8 @@ data class MealHistory(
     val uid: String = "",
     val date: Date = Date(),
     val meals: List<String> = emptyList(),
-    val restaurants: List<Restaurant> = emptyList()
+    val restaurants: List<Restaurant> = emptyList(),
+    val calorieGoal: Int = 0
 )
 
 data class Restaurant(

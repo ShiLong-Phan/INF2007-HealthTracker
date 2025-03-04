@@ -361,7 +361,8 @@ fun MealRecommendationScreen(
                                             mapOf("latitude" to coords.latitude, "longitude" to coords.longitude)
                                         }
                                     )
-                                }
+                                },
+                                "calorieGoal" to calorieIntake
                             )
                             firestore.collection("mealHistory")
                                 .add(mealHistoryData)

@@ -267,9 +267,9 @@ fun MealHistoryItem(navController: NavController, history: MealHistory) {
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Meals
+                // Calories Goal: Kcal
                 Text(
-                    text = "Meals: ${history.meals.size} items",
+                    text = "Calories Goal: ${history.calorieGoal} kcal", // Display calorie goal
                     style = MaterialTheme.typography.bodyLarge
                 )
 
