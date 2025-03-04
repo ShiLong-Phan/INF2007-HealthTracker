@@ -158,6 +158,111 @@ fun getYelpSearchTerm(meal: String?): String {
         meal.contains("protein shake", ignoreCase = true) -> "Smoothie bar"
         meal.contains("almond milk latte", ignoreCase = true) -> "Vegan coffee shop"
 
+        // ✅ Southeast Asian Cuisine
+        meal.contains("lemongrass", ignoreCase = true) -> "Vietnamese or Thai restaurant"
+        meal.contains("galangal", ignoreCase = true) -> "Thai restaurant"
+        meal.contains("turmeric rice", ignoreCase = true) -> "Malaysian restaurant"
+        meal.contains("coconut milk", ignoreCase = true) -> "Southeast Asian restaurant"
+        meal.contains("shrimp paste", ignoreCase = true) -> "Malaysian or Indonesian restaurant"
+        meal.contains("pandan", ignoreCase = true) -> "Southeast Asian bakery"
+        meal.contains("fish sauce", ignoreCase = true) -> "Vietnamese restaurant"
+        meal.contains("tamarind", ignoreCase = true) -> "Thai or Malaysian restaurant"
+        meal.contains("kaffir lime", ignoreCase = true) -> "Thai restaurant"
+        meal.contains("belacan", ignoreCase = true) -> "Malaysian restaurant"
+        meal.contains("sambal", ignoreCase = true) -> "Indonesian or Malaysian restaurant"
+        meal.contains("rendang", ignoreCase = true) -> "Indonesian restaurant"
+        meal.contains("laksa", ignoreCase = true) -> "Singaporean or Malaysian restaurant"
+        meal.contains("nasi lemak", ignoreCase = true) -> "Malaysian restaurant"
+        meal.contains("satay", ignoreCase = true) -> "Malaysian or Indonesian restaurant"
+        meal.contains("gado-gado", ignoreCase = true) -> "Indonesian restaurant"
+        meal.contains("pho", ignoreCase = true) -> "Vietnamese restaurant"
+        meal.contains("banh mi", ignoreCase = true) -> "Vietnamese sandwich shop"
+        meal.contains("bun cha", ignoreCase = true) -> "Vietnamese restaurant"
+        meal.contains("pad thai", ignoreCase = true) -> "Thai street food"
+        meal.contains("tom yum", ignoreCase = true) -> "Thai restaurant"
+        meal.contains("mango sticky rice", ignoreCase = true) -> "Thai dessert shop"
+        meal.contains("hainanese chicken rice", ignoreCase = true) -> "Singaporean restaurant"
+        meal.contains("char kway teow", ignoreCase = true) -> "Malaysian hawker food"
+        meal.contains("roti canai", ignoreCase = true) -> "Malaysian mamak stall"
+        meal.contains("bak kut teh", ignoreCase = true) -> "Singaporean/Malaysian herbal soup"
+        meal.contains("otak-otak", ignoreCase = true) -> "Malay grilled fish cake"
+        meal.contains("cendol", ignoreCase = true) -> "Southeast Asian dessert shop"
+        meal.contains("kuih", ignoreCase = true) -> "Malaysian traditional cakes"
+        meal.contains("sago", ignoreCase = true) -> "Southeast Asian dessert"
+        meal.contains("gado gado", ignoreCase = true) -> "Indonesian salad"
+        meal.contains("soto ayam", ignoreCase = true) -> "Indonesian soup restaurant"
+        meal.contains("nasi goreng", ignoreCase = true) -> "Indonesian fried rice"
+        meal.contains("mee rebus", ignoreCase = true) -> "Malay noodle dish"
+        meal.contains("popiah", ignoreCase = true) -> "Singaporean fresh spring rolls"
+        meal.contains("kaya toast", ignoreCase = true) -> "Singaporean kopitiam"
+
+        // Thailand
+        meal.contains("som tum", ignoreCase = true) -> "Thai papaya salad restaurant"
+        meal.contains("khao soi", ignoreCase = true) -> "Northern Thai restaurant"
+        meal.contains("tom kha gai", ignoreCase = true) -> "Thai coconut soup restaurant"
+        meal.contains("moo ping", ignoreCase = true) -> "Thai street food"
+        meal.contains("pad see ew", ignoreCase = true) -> "Thai stir-fried noodles"
+        meal.contains("massaman curry", ignoreCase = true) -> "Thai curry restaurant"
+        meal.contains("pla pao", ignoreCase = true) -> "Thai grilled fish"
+
+        // Vietnam
+        meal.contains("bánh xèo", ignoreCase = true) -> "Vietnamese pancake restaurant"
+        meal.contains("bún chả", ignoreCase = true) -> "Vietnamese grilled pork restaurant"
+        meal.contains("bánh cuốn", ignoreCase = true) -> "Vietnamese steamed rice rolls"
+        meal.contains("cơm tấm", ignoreCase = true) -> "Vietnamese broken rice restaurant"
+        meal.contains("bún đậu mắm tôm", ignoreCase = true) -> "Vietnamese fermented shrimp paste dish"
+
+        // Malaysia/Singapore
+        meal.contains("nasi kandar", ignoreCase = true) -> "Malaysian Indian-Muslim restaurant"
+        meal.contains("ayam penyet", ignoreCase = true) -> "Indonesian/Malaysian smashed fried chicken"
+        meal.contains("asam pedas", ignoreCase = true) -> "Malay sour and spicy stew"
+        meal.contains("apam balik", ignoreCase = true) -> "Malaysian peanut pancake"
+        meal.contains("roti jala", ignoreCase = true) -> "Malay net bread restaurant"
+        meal.contains("chendol", ignoreCase = true) -> "Southeast Asian dessert stall"
+
+        // Indonesia
+        meal.contains("sate padang", ignoreCase = true) -> "Indonesian Padang satay"
+        meal.contains("rawon", ignoreCase = true) -> "Javanese black beef soup"
+        meal.contains("gudeg", ignoreCase = true) -> "Javanese jackfruit stew"
+        meal.contains("pempek", ignoreCase = true) -> "Indonesian fishcake restaurant"
+        meal.contains("soto betawi", ignoreCase = true) -> "Jakarta beef soup restaurant"
+
+        // Philippines
+        meal.contains("sinigang", ignoreCase = true) -> "Filipino sour soup restaurant"
+        meal.contains("adobo", ignoreCase = true) -> "Filipino vinegar stew"
+        meal.contains("lechon", ignoreCase = true) -> "Filipino roasted pig restaurant"
+        meal.contains("kare-kare", ignoreCase = true) -> "Filipino peanut stew"
+        meal.contains("halo-halo", ignoreCase = true) -> "Filipino dessert shop"
+
+        // Myanmar (Burma)
+        meal.contains("mohinga", ignoreCase = true) -> "Burmese fish noodle soup"
+        meal.contains("laphet thoke", ignoreCase = true) -> "Burmese tea leaf salad"
+
+        // Cambodia
+        meal.contains("amok", ignoreCase = true) -> "Cambodian fish curry"
+        meal.contains("num banh chok", ignoreCase = true) -> "Khmer rice noodle dish"
+
+        // Laos
+        meal.contains("laap", ignoreCase = true) -> "Lao minced meat salad"
+        meal.contains("tam mak hoong", ignoreCase = true) -> "Lao papaya salad"
+
+        // Regional Ingredients
+        meal.contains("belacan", ignoreCase = true) -> "Malaysian shrimp paste dishes"
+        meal.contains("daun kesum", ignoreCase = true) -> "Vietnamese/Malay laksa herb"
+        meal.contains("candlenut", ignoreCase = true) -> "Indonesian/Malay rempah base"
+        meal.contains("torch ginger", ignoreCase = true) -> "Nyonya/Malay cuisine"
+
+        // Street Food & Snacks
+        meal.contains("pisang goreng", ignoreCase = true) -> "Southeast Asian fried banana"
+        meal.contains("kueh pie tee", ignoreCase = true) -> "Peranakan top hat pastry"
+        meal.contains("onde-onde", ignoreCase = true) -> "Malaysian glutinous rice ball"
+        meal.contains("putu piring", ignoreCase = true) -> "Singaporean steamed rice cake"
+
+        // Beverages
+        meal.contains("teh tarik", ignoreCase = true) -> "Malaysian pulled tea stall"
+        meal.contains("kopi", ignoreCase = true) -> "Southeast Asian coffee shop"
+        meal.contains("bandung", ignoreCase = true) -> "Malay rose syrup drink"
+
         // ✅ Catch-All Fallbacks
         else -> "Healthy food"
     }
