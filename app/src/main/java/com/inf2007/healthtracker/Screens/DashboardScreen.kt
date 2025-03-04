@@ -312,7 +312,7 @@ fun DashboardScreen(
                         stepCount = newStepCount
                     }
                     // Calorie Intake card uses today's calorie intake
-                    HealthStatCard(title = "Calorie Intake", value = "$calorieIntakeToday kcal", onClick = { navController.navigate("profile_screen") })
+                    HealthStatCard(title = "Calorie Intake", value = "$calorieIntakeToday kcal", onClick = { navController.navigate("capture_food_screen") })
                 }
 
                 Column(
