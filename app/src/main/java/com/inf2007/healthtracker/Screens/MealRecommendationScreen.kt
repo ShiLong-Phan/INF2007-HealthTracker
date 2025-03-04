@@ -193,17 +193,33 @@ fun MealRecommendationScreen(
                 // ✅ Extract keywords from each meal in the plan
                 val searchTerms = aiMealPlan
                     .flatMap { meal ->
+                        // Print the meal for debugging
+                        println("DEBUG: Processing Meal = $meal")
+
                         // Split the meal into lines and extract dish names
-                        meal.split("\n")
+                        val dishNames = meal.split("\n")
                             .filter { it.startsWith("-") } // Filter for ingredient lines
                             .map { it.substringBefore("(").trim() } // Extract dish names
-                            .map { getYelpSearchTerm(it) } // Get search term for each dish
+                            .map { dishName ->
+                                // Print the extracted dish name for debugging
+                                println("DEBUG: Extracted Dish Name = $dishName")
+                                dishName
+                            }
+
+                        // Map dish names to search terms
+                        dishNames.map { getYelpSearchTerm(it) }
                     }
                     .filterNot { it == "Healthy food" } // Remove generic fallbacks
                     .distinct() // Remove duplicates
                     .joinToString(", ") // Combine into a single search term
 
+                // Print the extracted keywords for debugging
+                println("DEBUG: Extracted Keywords = $searchTerms")
+
                 val finalSearchTerm = if (searchTerms.isEmpty()) "Restaurants" else searchTerms
+
+                // Print the final search term for debugging
+                println("DEBUG: Final Search Term = $finalSearchTerm")
 
                 // ✅ Fetch Restaurant Recommendations from Yelp
                 val apiKey = BuildConfig.yelpApiKey
@@ -257,9 +273,25 @@ fun MealRecommendationScreen(
                 val parsedYelpResponse1 = Gson().fromJson(yelpResponse1, YelpResponse::class.java)
                 val parsedYelpResponse2 = Gson().fromJson(yelpResponse2, YelpResponse::class.java)
 
-                restaurantRecommendations = (parsedYelpResponse1.businesses + parsedYelpResponse2.businesses)
+                // Combine results from both calls
+                val allRestaurants = (parsedYelpResponse1.businesses + parsedYelpResponse2.businesses)
                     .distinctBy { it.id } // Remove duplicates
-                    .take(10) // Limit to 10 results
+
+                // Sort restaurants by distance and prioritize yelpResponse1 restaurants
+                restaurantRecommendations = allRestaurants.sortedWith(
+                    compareBy(
+                        // Prioritize restaurants from yelpResponse1
+                        { it !in parsedYelpResponse1.businesses },
+                        // Sort by distance (ascending)
+                        { business ->
+                            userLocation?.let { loc ->
+                                business.coordinates?.let { coords ->
+                                    calculateDistance(loc, coords.latitude, coords.longitude)
+                                } ?: Float.MAX_VALUE
+                            } ?: Float.MAX_VALUE
+                        }
+                    )
+                ).take(10) // Limit to 10 results
 
                 println("DEBUG: Got ${restaurantRecommendations.size} restaurants from Yelp.")
                 restaurantRecommendations.forEach { business ->
