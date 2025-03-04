@@ -248,8 +248,7 @@ fun DashboardScreen(
     // DatePickerDialog display:
     if (showDatePicker) {
         val context = LocalContext.current
-        // Using Android's DatePickerDialog
-        android.app.DatePickerDialog(
+        val datePickerDialog = android.app.DatePickerDialog(
             context,
             { _, year, month, dayOfMonth ->
                 val calendar = Calendar.getInstance()
@@ -260,8 +259,15 @@ fun DashboardScreen(
             Calendar.getInstance().get(Calendar.YEAR),
             Calendar.getInstance().get(Calendar.MONTH),
             Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
-        ).show()
+        )
+
+        datePickerDialog.setOnCancelListener {
+            showDatePicker = false
+        }
+
+        datePickerDialog.show()
     }
+
 
     Scaffold(
         topBar = {
@@ -504,7 +510,7 @@ fun WeeklyStepsLineGraphWithAxes(
     var showAxes by remember { mutableStateOf(false) }
     // After 3 seconds, set showAxes to true
     LaunchedEffect(Unit) {
-        delay(1500)
+        delay(2000)
         showAxes = true
     }
 
