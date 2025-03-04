@@ -5,6 +5,7 @@ data class YelpResponse(
 )
 
 data class Business(
+    val id: String,
     val name: String,
     val rating: Double,
     val location: Location,

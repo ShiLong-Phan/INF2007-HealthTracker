@@ -190,46 +190,80 @@ fun MealRecommendationScreen(
                     calorieIntake
                 )
 
-                // ✅ Convert AI-generated meal to a Yelp-friendly search term
-                val searchTerm = getYelpSearchTerm(aiMealPlan.firstOrNull())
+                // ✅ Extract keywords from each meal in the plan
+                val searchTerms = aiMealPlan
+                    .flatMap { meal ->
+                        // Split the meal into lines and extract dish names
+                        meal.split("\n")
+                            .filter { it.startsWith("-") } // Filter for ingredient lines
+                            .map { it.substringBefore("(").trim() } // Extract dish names
+                            .map { getYelpSearchTerm(it) } // Get search term for each dish
+                    }
+                    .filterNot { it == "Healthy food" } // Remove generic fallbacks
+                    .distinct() // Remove duplicates
+                    .joinToString(", ") // Combine into a single search term
+
+                val finalSearchTerm = if (searchTerms.isEmpty()) "Restaurants" else searchTerms
 
                 // ✅ Fetch Restaurant Recommendations from Yelp
-                if (searchTerm.isNotEmpty()) {
-                    val apiKey = BuildConfig.yelpApiKey
-                    val yelpResponse = withContext(Dispatchers.IO) {
-                        if (userLocation == null) {
-                            YelpApi.searchRestaurants(
-                                location = "Singapore",
-                                term = searchTerm, // ✅ Use mapped search term
-                                categories = "healthy,restaurants", // Restrict search to healthy restaurants
-                                limit = 10,
-                                apiKey = apiKey
-                            )
-                        } else{
-                            YelpApi.searchRestaurants(
-                                latitude = userLocation!!.latitude,
-                                longitude = userLocation!!.longitude,
-                                location = "Singapore",
-                                term = searchTerm, // ✅ Use mapped search term
-                                categories = "healthy,restaurants", // Restrict search to healthy restaurants
-                                limit = 10,
-                                apiKey = apiKey
-                            )
-                        }
-
-                    }
-
-                    if (yelpResponse != null) {
-                        val parsedYelpResponse =
-                            Gson().fromJson(yelpResponse, YelpResponse::class.java)
-                        restaurantRecommendations = parsedYelpResponse.businesses
-                        println("DEBUG: Got ${restaurantRecommendations.size} restaurants from Yelp.")
-                        restaurantRecommendations.forEach { business ->
-                            println("DEBUG: ${business.name} => coords=${business.coordinates}")
-                        }
+                val apiKey = BuildConfig.yelpApiKey
+                val yelpResponse1 = withContext(Dispatchers.IO) {
+                    // First call: Search based on keywords
+                    if (userLocation == null) {
+                        YelpApi.searchRestaurants(
+                            location = "Singapore",
+                            term = finalSearchTerm, // Use combined search terms
+                            categories = "", // No category restriction
+                            limit = 10, // Limit to 10 results
+                            apiKey = apiKey
+                        )
                     } else {
-                        errorMessage = "Failed to get restaurant recommendations"
+                        YelpApi.searchRestaurants(
+                            latitude = userLocation!!.latitude,
+                            longitude = userLocation!!.longitude,
+                            location = "Singapore",
+                            term = finalSearchTerm, // Use combined search terms
+                            categories = "", // No category restriction
+                            limit = 10, // Limit to 10 results
+                            apiKey = apiKey
+                        )
                     }
+                }
+
+                val yelpResponse2 = withContext(Dispatchers.IO) {
+                    // Second call: Fallback to healthy restaurants
+                    if (userLocation == null) {
+                        YelpApi.searchRestaurants(
+                            location = "Singapore",
+                            term = "Healthy restaurants", // Fallback search term
+                            categories = "healthy", // Restrict to healthy restaurants
+                            limit = 10, // Limit to 10 results
+                            apiKey = apiKey
+                        )
+                    } else {
+                        YelpApi.searchRestaurants(
+                            latitude = userLocation!!.latitude,
+                            longitude = userLocation!!.longitude,
+                            location = "Singapore",
+                            term = "Healthy restaurants", // Fallback search term
+                            categories = "healthy", // Restrict to healthy restaurants
+                            limit = 10, // Limit to 10 results
+                            apiKey = apiKey
+                        )
+                    }
+                }
+
+                // Combine results from both calls
+                val parsedYelpResponse1 = Gson().fromJson(yelpResponse1, YelpResponse::class.java)
+                val parsedYelpResponse2 = Gson().fromJson(yelpResponse2, YelpResponse::class.java)
+
+                restaurantRecommendations = (parsedYelpResponse1.businesses + parsedYelpResponse2.businesses)
+                    .distinctBy { it.id } // Remove duplicates
+                    .take(10) // Limit to 10 results
+
+                println("DEBUG: Got ${restaurantRecommendations.size} restaurants from Yelp.")
+                restaurantRecommendations.forEach { business ->
+                    println("DEBUG: ${business.name} => coords=${business.coordinates}")
                 }
             } catch (e: Exception) {
                 errorMessage = "Error fetching data: ${e.message}"
