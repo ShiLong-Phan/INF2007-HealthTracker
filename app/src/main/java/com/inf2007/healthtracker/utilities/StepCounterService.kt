@@ -1,9 +1,12 @@
 package com.inf2007.healthtracker.utilities
 
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -19,6 +22,7 @@ class StepCounterService : Service() {
     private lateinit var stepSensorHelper: StepSensorHelper
     private val firestore = FirebaseFirestore.getInstance()
     private val user = FirebaseAuth.getInstance().currentUser
+    private val sharedPreferences by lazy { getSharedPreferences("stepCounterPrefs", Context.MODE_PRIVATE) }
 
     override fun onCreate() {
         super.onCreate()
@@ -26,10 +30,12 @@ class StepCounterService : Service() {
 
         startForeground(1, createNotification())
 
-        // Start the step sensor helper
         stepSensorHelper = StepSensorHelper(this) { stepCount ->
             user?.let { syncStepsToFirestore(it.uid, stepCount) }
         }
+
+        // Schedule a reset at midnight
+        scheduleMidnightReset()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -58,7 +64,7 @@ class StepCounterService : Service() {
     }
 
     private fun syncStepsToFirestore(userId: String, stepCount: Int) {
-        val stepsRef = firestore.collection("steps").document("${user?.uid}_${Date()}")
+        val stepsRef = firestore.collection("steps").document("${user?.uid}_${getCurrentDate()}")
 
         stepsRef.get().addOnSuccessListener { document ->
             if (document.exists()) {
@@ -76,8 +82,30 @@ class StepCounterService : Service() {
         }
     }
 
-    private fun getCurrentDate(): String {
-        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        return sdf.format(Date())
+    private fun scheduleMidnightReset() {
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.DAY_OF_YEAR, 1)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(this, MidnightResetReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+
+        alarmManager.setExact(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+    }
+}
+
+// Broadcast Receiver to Reset Steps at Midnight
+class MidnightResetReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent?) {
+        val sharedPreferences = context.getSharedPreferences("stepCounterPrefs", Context.MODE_PRIVATE)
+        sharedPreferences.edit().apply {
+            putString("lastRecordedDate", getCurrentDate())
+            putInt("initialStepCount", -1)
+            apply()
+        }
+        Log.d("MidnightReset", "Steps reset at midnight")
     }
 }

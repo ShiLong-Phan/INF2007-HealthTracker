@@ -40,30 +40,43 @@ import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.max
 
 @Composable
 fun StepCounter(user: FirebaseUser, onStepCountUpdated: (Int) -> Unit) {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("stepCounterPrefs", Context.MODE_PRIVATE)
+
     var stepCount by remember { mutableStateOf(0) }
     var lastSyncedSteps by remember { mutableStateOf(0) }
     var initialStepCount by remember { mutableStateOf(sharedPreferences.getInt("initialStepCount", -1)) }
 
     val firestore = FirebaseFirestore.getInstance()
     val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-    val formattedDate = dateFormat.format(Date())
-    val stepsRef = firestore.collection("steps").document("${user?.uid}_${formattedDate}")
+    var lastDate by remember { mutableStateOf(dateFormat.format(Date())) }
 
-    // Fetch last recorded steps from Firestore on launch
-    LaunchedEffect(user) {
-        stepsRef.get().addOnSuccessListener { document ->
-            if (document.exists()) {
-                lastSyncedSteps = document.getLong("steps")?.toInt() ?: 0
-                stepCount = lastSyncedSteps
-                onStepCountUpdated(stepCount) // Update step count in MainScreen
+    val stepsRef = firestore.collection("steps").document("${user.uid}_${lastDate}")
+
+    // 🕛 CHECK IF NEW DAY AND RESET
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60 * 1000) // Check every minute
+
+            val currentDate = dateFormat.format(Date())
+            if (currentDate != lastDate) {
+                // 🆕 New Day Detected: Reset Steps
+                lastDate = currentDate
+                initialStepCount = -1 // Reset initial step count
+                stepCount = 0
+                onStepCountUpdated(0)
+
+                with(sharedPreferences.edit()) {
+                    putInt("initialStepCount", -1) // Reset saved step count
+                    apply()
+                }
+
+                Log.d("StepCounter", "New day detected! Step count reset.")
             }
-        }.addOnFailureListener { exception ->
-            Log.e("StepCounter", "Failed to retrieve steps: ${exception.message}")
         }
     }
 
@@ -86,8 +99,8 @@ fun StepCounter(user: FirebaseUser, onStepCountUpdated: (Int) -> Unit) {
                             }
                         }
                         val newStepCount = event.values[0].toInt() - initialStepCount
-                        stepCount = lastSyncedSteps + newStepCount
-                        onStepCountUpdated(stepCount) // Update step count in MainScreen
+                        stepCount = max(0, lastSyncedSteps + newStepCount) // Ensure no negative values
+                        onStepCountUpdated(stepCount)
                         Log.d("StepCounter", "Step count: $stepCount")
                     }
                 }
@@ -103,10 +116,10 @@ fun StepCounter(user: FirebaseUser, onStepCountUpdated: (Int) -> Unit) {
         }
     }
 
+    // UI Code remains unchanged
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Secondary),
-//        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        colors = CardDefaults.cardColors(containerColor = Secondary)
     ) {
         Column(
             modifier = Modifier
