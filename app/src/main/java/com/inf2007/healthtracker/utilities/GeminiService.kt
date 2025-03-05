@@ -31,7 +31,7 @@ class GeminiService(private val apiKey: String) {
     ): List<String> {
         return try {
             val prompt = """
-                Generate a **structured and detailed** meal plan catered for South East Asians based on:
+                Generate a **structured and detailed** meal plan catered for Asians based on:
             - Age: $age
             - Weight: $weight kg
             - Height: $height cm

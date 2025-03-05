@@ -273,25 +273,30 @@ fun MealRecommendationScreen(
                 val parsedYelpResponse1 = Gson().fromJson(yelpResponse1, YelpResponse::class.java)
                 val parsedYelpResponse2 = Gson().fromJson(yelpResponse2, YelpResponse::class.java)
 
-                // Combine results from both calls
-                val allRestaurants = (parsedYelpResponse1.businesses + parsedYelpResponse2.businesses)
-                    .distinctBy { it.id } // Remove duplicates
+                // Step 1: Prioritize yelpResponse1 restaurants (up to 10)
+                val prioritizedRestaurants = parsedYelpResponse1.businesses.take(10)
 
-                // Sort restaurants by distance and prioritize yelpResponse1 restaurants
-                restaurantRecommendations = allRestaurants.sortedWith(
-                    compareBy(
-                        // Prioritize restaurants from yelpResponse1
-                        { it !in parsedYelpResponse1.businesses },
-                        // Sort by distance (ascending)
-                        { business ->
-                            userLocation?.let { loc ->
-                                business.coordinates?.let { coords ->
-                                    calculateDistance(loc, coords.latitude, coords.longitude)
-                                } ?: Float.MAX_VALUE
-                            } ?: Float.MAX_VALUE
-                        }
-                    )
-                ).take(10) // Limit to 10 results
+                // Step 2: If fewer than 10 restaurants, add from yelpResponse2
+                val remainingSlots = 10 - prioritizedRestaurants.size
+                val additionalRestaurants = if (remainingSlots > 0) {
+                    parsedYelpResponse2.businesses
+                        .filterNot { it in prioritizedRestaurants } // Avoid duplicates
+                        .take(remainingSlots)
+                } else {
+                    emptyList()
+                }
+
+                // Step 3: Combine the lists
+                val combinedRestaurants = prioritizedRestaurants + additionalRestaurants
+
+                // Step 4: Sort the final 10 restaurants by distance
+                restaurantRecommendations = combinedRestaurants.sortedBy { business ->
+                    userLocation?.let { loc ->
+                        business.coordinates?.let { coords ->
+                            calculateDistance(loc, coords.latitude, coords.longitude)
+                        } ?: Double.MAX_VALUE
+                    } ?: Double.MAX_VALUE
+                }
 
                 println("DEBUG: Got ${restaurantRecommendations.size} restaurants from Yelp.")
                 restaurantRecommendations.forEach { business ->
