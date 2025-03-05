@@ -836,7 +836,7 @@ fun ProfileScreen(
                                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
                                     modifier = Modifier.height(56.dp).weight(1f)
                                 ) {
-                                    Text("Save Changes")
+                                    Text("Save")
                                 }
                             }
                         }
