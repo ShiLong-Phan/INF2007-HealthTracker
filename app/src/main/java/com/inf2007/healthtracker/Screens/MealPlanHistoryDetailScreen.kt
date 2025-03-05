@@ -4,6 +4,7 @@ import android.content.Intent
 import android.location.Location
 import android.net.Uri
 import android.util.Log
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -190,11 +192,22 @@ fun MealPlanHistoryDetailScreen(
                     // Date Section
                     item {
                         mealHistory?.let { history ->
-                            Text(
-                                text = "Date: ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(history.date)}",
-                                style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier.padding(horizontal = 40.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                                    .background(MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.medium)
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "${SimpleDateFormat("MMM d, yyyy hh:mm a", Locale.getDefault()).format(history.date)}",
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        textAlign = TextAlign.Center
+                                    )
+                                )
+                            }
                             Spacer(modifier = Modifier.height(16.dp))
                         }
                     }

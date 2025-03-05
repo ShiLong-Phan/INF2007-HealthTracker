@@ -34,7 +34,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.draw.clip
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
-
 @Composable
 fun MealPlanHistoryScreen(
     navController: NavController,
@@ -82,8 +81,18 @@ fun MealPlanHistoryScreen(
         } else {
             val lowerCaseQuery = query.lowercase()
             filteredMealHistory = mealHistory.filter {
-                val formattedDate = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(it.date).lowercase()
-                formattedDate.contains(lowerCaseQuery)
+                val formattedDates = listOf(
+                    SimpleDateFormat("MMM d yyyy", Locale.getDefault()).format(it.date).lowercase(),
+                    SimpleDateFormat("d MMM yyyy", Locale.getDefault()).format(it.date).lowercase(),
+                    SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(it.date).lowercase(),
+                    SimpleDateFormat("d MMM, yyyy", Locale.getDefault()).format(it.date).lowercase(),
+                    SimpleDateFormat("d MMM", Locale.getDefault()).format(it.date).lowercase(),
+                    SimpleDateFormat("MMMM d yyyy", Locale.getDefault()).format(it.date).lowercase(),
+                    SimpleDateFormat("d MMMM yyyy", Locale.getDefault()).format(it.date).lowercase(),
+                    SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()).format(it.date).lowercase(),
+                    SimpleDateFormat("d MMMM, yyyy", Locale.getDefault()).format(it.date).lowercase()
+                )
+                formattedDates.any { formattedDate -> formattedDate.contains(lowerCaseQuery) }
             }
         }
     }
@@ -231,13 +240,15 @@ fun MealPlanHistoryScreen(
     }
 }
 
-
 @Composable
 fun MealHistoryItem(navController: NavController, history: MealHistory) {
-    val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()) // Formats the date
+    val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) // Formats the date
     val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault()) // Formats the time
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clickable { navController.navigate("meal_plan_history_detail/${history.uid}/${history.date.time}") },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clickable { navController.navigate("meal_plan_history_detail/${history.uid}/${history.date.time}") },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = MaterialTheme.shapes.small,
         colors = CardDefaults.cardColors(containerColor = Secondary, contentColor = Color.White),

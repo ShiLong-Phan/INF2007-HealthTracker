@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.DismissDirection
@@ -57,8 +58,8 @@ import com.inf2007.healthtracker.ui.theme.Secondary
 import com.inf2007.healthtracker.utilities.BottomNavigationBar
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.Date
 import androidx.compose.material.icons.filled.LocalDining
-import androidx.compose.material.icons.filled.DirectionsWalk
 import com.inf2007.healthtracker.ui.theme.Primary
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
@@ -77,8 +78,15 @@ fun HistoryScreen(
     val currentUser = FirebaseAuth.getInstance().currentUser
 
     // Date formatter to use for displaying and filtering dates
-    //val dateFormatter = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault())
     val dateFormatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+    val inputDateFormats = listOf(
+        SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()),
+        SimpleDateFormat("d MMMM yyyy", Locale.getDefault()),
+        SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()),
+        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()),
+        SimpleDateFormat("dd MMM yyyy", Locale.getDefault()),
+        SimpleDateFormat("d MMM yyyy", Locale.getDefault())
+    )
 
     val totalCalories = filteredFoodEntries.sumOf { it.caloricValue }
     val totalSteps = filteredStepsHistory.sumOf { it.steps }
@@ -88,7 +96,6 @@ fun HistoryScreen(
             // Fetch Food Entries from Firestore
             FirebaseFirestore.getInstance().collection("foodEntries")
                 .whereEqualTo("userId", it.uid)
-                //.orderBy("timestamp", Query.Direction.DESCENDING)
                 .orderBy("dateString", Query.Direction.DESCENDING)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
@@ -111,7 +118,6 @@ fun HistoryScreen(
             // Fetch Steps History from Firestore
             FirebaseFirestore.getInstance().collection("steps")
                 .whereEqualTo("userId", it.uid)
-                //.orderBy("timestamp", Query.Direction.DESCENDING)
                 .orderBy("dateString", Query.Direction.DESCENDING)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
@@ -142,15 +148,21 @@ fun HistoryScreen(
             val lowerCaseQuery = query.lowercase()
 
             // Filter food entries by formatted date string
-            filteredFoodEntries = foodEntriesHistory.filter {
-                val formattedDate = it.timestamp?.toDate()?.let { dateFormatter.format(it) }
-                formattedDate?.lowercase()?.contains(lowerCaseQuery) == true
+            filteredFoodEntries = foodEntriesHistory.filter { entry ->
+                inputDateFormats.any { format ->
+                    val date = entry.timestamp?.toDate()
+                    val formattedDate = date?.let { format.format(it).lowercase() }
+                    formattedDate?.contains(lowerCaseQuery) == true
+                }
             }
 
             // Filter steps entries by formatted date string
-            filteredStepsHistory = stepsHistory.filter {
-                val formattedDate = it.timestamp?.toDate()?.let { dateFormatter.format(it) }
-                formattedDate?.lowercase()?.contains(lowerCaseQuery) == true
+            filteredStepsHistory = stepsHistory.filter { entry ->
+                inputDateFormats.any { format ->
+                    val date = entry.timestamp?.toDate()
+                    val formattedDate = date?.let { format.format(it).lowercase() }
+                    formattedDate?.contains(lowerCaseQuery) == true
+                }
             }
         }
     }
@@ -205,6 +217,11 @@ fun HistoryScreen(
                     val totalCaloriesfiltered = filteredFoodEntries.sumOf { it.caloricValue }
                     val totalStepsfiltered = filteredStepsHistory.sumOf { it.steps }
 
+                    // Group food entries by date
+                    val groupedFoodEntries = filteredFoodEntries.groupBy { entry ->
+                        entry.timestamp?.toDate()?.let { dateFormatter.format(it) } ?: "No date"
+                    }
+
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -214,7 +231,6 @@ fun HistoryScreen(
                         // Show the totals at the top of the list
                         item {
                             TotalCard(totalCaloriesfiltered, totalStepsfiltered)
-
                         }
 
                         item {
@@ -225,43 +241,55 @@ fun HistoryScreen(
                                 Text("No food entries found.", style = MaterialTheme.typography.bodyLarge)
                             }
                         } else {
-                            items(filteredFoodEntries) { entry ->
-                                val dismissState = rememberDismissState(
-                                    confirmStateChange = { dismissValue ->
-                                        if (dismissValue == DismissValue.DismissedToStart) {
-                                            pendingDeleteItem = entry
+                            groupedFoodEntries.forEach { (date, entries) ->
+                                item {
+                                    Text("Date: $date", style = MaterialTheme.typography.bodyLarge)
+                                }
+                                val totalCaloriesForDate = entries.sumOf { it.caloricValue }
+                                item {
+                                    Text("Total Calories: $totalCaloriesForDate", style = MaterialTheme.typography.bodyMedium)
+                                }
+                                items(entries) { entry ->
+                                    val dismissState = rememberDismissState(
+                                        confirmStateChange = { dismissValue ->
+                                            if (dismissValue == DismissValue.DismissedToStart) {
+                                                pendingDeleteItem = entry
+                                            }
+                                            false // Don't auto-dismiss
                                         }
-                                        false // Don't auto-dismiss
-                                    }
-                                )
+                                    )
 
-                                SwipeToDismiss(
-                                    state = dismissState,
-                                    directions = setOf(DismissDirection.EndToStart),
-                                    background = {
-                                        val color = if (dismissState.targetValue == DismissValue.Default)
-                                            MaterialTheme.colorScheme.surface
-                                        else
-                                            MaterialTheme.colorScheme.error
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .clip(RoundedCornerShape(16.dp))
-                                                .background(color)
-                                                .padding(8.dp),
-                                            contentAlignment = Alignment.CenterEnd
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = "Delete",
-                                                tint = MaterialTheme.colorScheme.onError
-                                            )
+                                    SwipeToDismiss(
+                                        state = dismissState,
+                                        directions = setOf(DismissDirection.EndToStart),
+                                        background = {
+                                            val color = if (dismissState.targetValue == DismissValue.Default)
+                                                MaterialTheme.colorScheme.surface
+                                            else
+                                                MaterialTheme.colorScheme.error
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .clip(RoundedCornerShape(16.dp))
+                                                    .background(color)
+                                                    .padding(8.dp),
+                                                contentAlignment = Alignment.CenterEnd
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Delete,
+                                                    contentDescription = "Delete",
+                                                    tint = MaterialTheme.colorScheme.onError
+                                                )
+                                            }
+                                        },
+                                        dismissContent = {
+                                            FoodEntryHistoryCard(entry = entry, dateFormatter = dateFormatter)
                                         }
-                                    },
-                                    dismissContent = {
-                                        FoodEntryHistoryCard(entry = entry, dateFormatter = dateFormatter)
-                                    }
-                                )
+                                    )
+                                }
+                                item {
+                                    Spacer(modifier = Modifier.height(24.dp))
+                                }
                             }
                         }
                         item {
@@ -317,7 +345,6 @@ fun HistoryScreen(
 
                 // Confirmation dialog for deletion remains unchanged...
             }
-
 
             // Confirmation dialog for deletion
             pendingDeleteItem?.let { item ->
@@ -425,7 +452,7 @@ fun TotalCard(totalCalories: Int, totalSteps: Int) {
         shape = MaterialTheme.shapes.small,
         colors = CardDefaults.cardColors(containerColor = Primary, contentColor = MaterialTheme.colorScheme.onPrimary),
 
-    ) {
+        ) {
         Column(
             modifier = Modifier.padding(16.dp),
             //horizontalAlignment = Alignment.CenterHorizontally
@@ -479,4 +506,3 @@ data class StepsEntry(
     val timestamp: Timestamp? = null,
     val userId: String = ""
 )
-
