@@ -82,6 +82,7 @@ fun DashboardScreen(
     var desiredHydration by remember { mutableStateOf(0) }
     var foodEntries by remember { mutableStateOf<List<FoodEntry>>(emptyList()) }
     var weeklyDates by remember { mutableStateOf(emptyList<String>()) }
+    var weeklyCalories by remember { mutableStateOf(listOf(0, 0, 0, 0, 0, 0, 0)) }
 
     // ---------------------------
     // New states for date selection:
@@ -245,6 +246,47 @@ fun DashboardScreen(
         }
     }
 
+    // Query for calorie intake for the past 7 days
+    LaunchedEffect(weeklyDates, currentUser) {
+        currentUser?.let { user ->
+            // Initialize a map for calorie intake by date
+            val caloriesMap = mutableMapOf<String, Int>()
+
+            // Query for food entries within the past 7 days
+            FirebaseFirestore.getInstance().collection("foodEntries")
+                .whereEqualTo("userId", user.uid)
+                .whereIn("dateString", weeklyDates) // Ensure your query uses the correct weeklyDates
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.e("WeeklyCalories", "Error fetching calorie data: ${error.message}")
+                        return@addSnapshotListener
+                    }
+
+                    // Initialize all the days to 0 calories
+                    weeklyCalories = weeklyDates.map { 0 }
+
+                    snapshot?.documents?.forEach { doc ->
+                        val dateString = doc.getString("dateString")
+                        val caloricValue = doc.getLong("caloricValue")?.toInt() ?: 0
+
+                        // Sum the calories for each date in the snapshot
+                        if (dateString != null && weeklyDates.contains(dateString)) {
+                            // Update the caloriesMap
+                            caloriesMap[dateString] = (caloriesMap[dateString] ?: 0) + caloricValue
+                        }
+                    }
+
+                    // Update weeklyCalories with the summed calorie intake for each date
+                    weeklyCalories = weeklyDates.map { date ->
+                        caloriesMap[date] ?: 0
+                    }
+
+                    Log.d("WeeklyCalories", "Weekly Calorie Intakes: $weeklyCalories")
+                }
+        }
+    }
+
+
     // DatePickerDialog display:
     if (showDatePicker) {
         val context = LocalContext.current
@@ -386,6 +428,20 @@ fun DashboardScreen(
             )
 
             WeeklyStepsLineGraphWithAxes(weeklySteps, weeklyDates)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Weekly Calorie Intake",
+                style = MaterialTheme.typography.titleLarge,
+                textAlign = TextAlign.Center
+            )
+
+            // Show the bar chart
+            WeeklyCalorieBarChart(
+                weeklyCalories = weeklyCalories,
+                dateLabels = weeklyDates
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -904,5 +960,152 @@ fun AIHealthTipsCard(healthTips: String, isLoading: Boolean) {
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+
+@Composable
+fun WeeklyCalorieBarChart(
+    weeklyCalories: List<Int>,
+    dateLabels: List<String>
+) {
+    // Optional: a state to show/hide axes after some delay, just like you did for the line graph
+    var showAxes by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(2000)
+        showAxes = true
+    }
+
+    // Calculate min/max to scale bars properly:
+    val maxCalories = (weeklyCalories.maxOrNull() ?: 0).coerceAtLeast(1)
+    val minCalories = weeklyCalories.minOrNull() ?: 0
+    val range = (maxCalories - minCalories).coerceAtLeast(1)
+
+    // Axis spacing on the left and bottom to accommodate text
+    val leftPaddingPx = 60f
+    val bottomPaddingPx = 40f
+
+    // Number of horizontal "ticks" for the y-axis
+    val labelCount = 5
+    // Calculate the step increment between each tick label on the y-axis
+    val stepIncrement = (range / (labelCount - 1)).coerceAtLeast(1)
+
+    // Primary color for bars
+    val barColor = MaterialTheme.colorScheme.primary
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp)
+    ) {
+        // The usable chart area is reduced by our left/bottom padding
+        val chartWidth = size.width - leftPaddingPx
+        val chartHeight = size.height - bottomPaddingPx
+
+        // 1. Draw axes (optional)
+        if (showAxes) {
+            // Y-axis
+            drawLine(
+                color = Color.Black,
+                start = Offset(x = leftPaddingPx, y = 0f),
+                end = Offset(x = leftPaddingPx, y = chartHeight),
+                strokeWidth = 2f
+            )
+
+            // X-axis
+            drawLine(
+                color = Color.Black,
+                start = Offset(x = leftPaddingPx, y = chartHeight),
+                end = Offset(x = leftPaddingPx + chartWidth, y = chartHeight),
+                strokeWidth = 2f
+            )
+
+            // 2. Draw Y-axis labels and ticks
+            for (i in 0 until labelCount) {
+                val labelValue = minCalories + i * stepIncrement
+                val fraction = (labelValue - minCalories) / range.toFloat()
+                // Y coordinate (invert fraction because (0,0) is top-left)
+                val yCoord = chartHeight * (1 - fraction)
+
+                // Tick mark on the y-axis
+                drawLine(
+                    color = Color.Black,
+                    start = Offset(x = leftPaddingPx - 5f, y = yCoord),
+                    end = Offset(x = leftPaddingPx, y = yCoord),
+                    strokeWidth = 2f
+                )
+
+                // Draw label text
+                drawContext.canvas.nativeCanvas.apply {
+                    drawText(
+                        labelValue.toString(),
+                        leftPaddingPx - 10f, // a bit to the left of the tick
+                        yCoord + 8f,         // shift down for better centering
+                        android.graphics.Paint().apply {
+                            textSize = 32f
+                            textAlign = android.graphics.Paint.Align.RIGHT
+                            color = android.graphics.Color.BLACK
+                        }
+                    )
+                }
+            }
+        }
+
+        // 3. Calculate each bar’s position and size
+        val barCount = weeklyCalories.size
+        if (barCount > 0) {
+            // Each "slot" on the X-axis for one bar
+            val slotWidth = chartWidth / barCount
+
+            // A fraction of the slot width to use for actual bar width
+            // (so there is some space between bars)
+            val barWidth = slotWidth * 0.6f
+
+            weeklyCalories.forEachIndexed { index, calories ->
+                val fraction = (calories - minCalories) / range.toFloat()
+                val barHeight = chartHeight * fraction
+
+                // Calculate the left/right coordinate for the bar
+                val left = leftPaddingPx + (index * slotWidth) + (slotWidth - barWidth) / 2
+                val top = chartHeight - barHeight
+                val right = left + barWidth
+                val bottom = chartHeight
+
+                // Draw the bar
+                drawRect(
+                    color = barColor,
+                    topLeft = Offset(left, top),
+                    size = Size(width = barWidth, height = barHeight)
+                )
+
+                // 4. Optionally label each bar along the X-axis
+                if (showAxes) {
+                    // For dateLabels, we can either show the entire date or just the day
+                    val dateLabel = dateLabels.getOrNull(index) ?: ""
+                    val dayString = try {
+                        val parsedDate = SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).parse(dateLabel)
+                        // Show day number only
+                        SimpleDateFormat("d", Locale.getDefault()).format(parsedDate)
+                    } catch (e: Exception) {
+                        dateLabel // fallback if parsing fails
+                    }
+
+                    // Place the text slightly below the x-axis
+                    drawContext.canvas.nativeCanvas.apply {
+                        drawText(
+                            dayString,
+                            left + barWidth / 2,       // center the text under the bar
+                            chartHeight + 30f,         // below the x-axis
+                            android.graphics.Paint().apply {
+                                textSize = 32f
+                                color = android.graphics.Color.BLACK
+                                textAlign = android.graphics.Paint.Align.CENTER
+                                isFakeBoldText = true
+                            }
+                        )
+                    }
+                }
+            }
+        }
     }
 }
