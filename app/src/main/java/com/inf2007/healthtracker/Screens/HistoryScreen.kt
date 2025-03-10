@@ -120,12 +120,15 @@ fun HistoryScreen(
     // Date formatter for display
     val dateFormatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
     val inputDateFormats = listOf(
-        SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()),
+        SimpleDateFormat("MMM d yyyy", Locale.getDefault()),
+        SimpleDateFormat("d MMM yyyy", Locale.getDefault()),
+        SimpleDateFormat("MMM d, yyyy", Locale.getDefault()),
+        SimpleDateFormat("d MMM, yyyy", Locale.getDefault()),
+        SimpleDateFormat("d MMM", Locale.getDefault()),
+        SimpleDateFormat("MMMM d yyyy", Locale.getDefault()),
         SimpleDateFormat("d MMMM yyyy", Locale.getDefault()),
-        SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()),
-        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()),
-        SimpleDateFormat("dd MMM yyyy", Locale.getDefault()),
-        SimpleDateFormat("d MMM yyyy", Locale.getDefault())
+        SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()),
+        SimpleDateFormat("d MMMM, yyyy", Locale.getDefault())
     )
 
     // Function to filter the history entries based on search mode
