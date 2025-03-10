@@ -87,15 +87,15 @@ fun ProfileScreen(
                 .addOnSuccessListener { document ->
                     userName = document.getString("name") ?: "Unknown User"
                     userEmail = document.getString("email") ?: "Unknown Email"
-                    userGender = document.getString("gender") ?: ""
-                    userAge = document.getString("age") ?: ""
-                    weight = document.get("weight")?.toString() ?: ""
-                    height = document.get("height")?.toString() ?: ""
-                    activityLevel = document.getString("activity_level") ?: "Sedentary"
+                    userGender = document.getString("gender") ?: "Not Set"
+                    userAge = document.getLong("age")?.toString() ?: "0"  // Ensure age is treated as a number
+                    weight = document.getLong("weight")?.toString() ?: "0"  // Ensure weight is treated as a number
+                    height = document.getLong("height")?.toString() ?: "0"  // Ensure height is treated as a number
+                    activityLevel = document.getString("activity_level") ?: "Not Set"
                     dietaryPreference = document.getString("dietary_preference") ?: "None"
-                    calorieIntake = document.get("calorie_intake")?.toString() ?: ""
-                    stepsGoal = document.get("steps_goal")?.toString() ?: ""
-                    hydrationGoal = document.get("hydration_goal")?.toString() ?: ""
+                    calorieIntake = document.getLong("calorie_intake")?.toString() ?: "0"  // Ensure calorieIntake is treated as a number
+                    stepsGoal = document.getLong("steps_goal")?.toString() ?: "0"  // Ensure stepsGoal is treated as a number
+                    hydrationGoal = document.getLong("hydration_goal")?.toString() ?: "0"  // Ensure hydrationGoal is treated as a number
                     isLoading = false
                 }
                 .addOnFailureListener { exception ->
@@ -230,7 +230,7 @@ fun ProfileScreen(
                                             style = MaterialTheme.typography.bodyLarge.toSpanStyle()
                                                 .copy(color = Color.White)
                                         ) {
-                                            append("$weight kg")
+                                            append(if (weight == "0") "Not Set" else "$weight kg")
                                         }
                                     },
                                     textAlign = TextAlign.Center
@@ -256,7 +256,7 @@ fun ProfileScreen(
                                             style = MaterialTheme.typography.bodyLarge.toSpanStyle()
                                                 .copy(color = Color.White)
                                         ) {
-                                            append("$height cm")
+                                            append(if (height == "0") "Not Set" else "$height cm")
                                         }
                                     },
                                     textAlign = TextAlign.Center
@@ -839,6 +839,7 @@ fun ProfileScreen(
                                         )
 
                                         // Ensure weight and height are stored as Integers only if valid
+                                        userAge.toIntOrNull()?.let { updates["age"] = it }
                                         weight.toIntOrNull()?.let { updates["weight"] = it }
                                         height.toIntOrNull()?.let { updates["height"] = it }
                                         calorieIntake.toIntOrNull()?.let { updates["calorie_intake"] = it }

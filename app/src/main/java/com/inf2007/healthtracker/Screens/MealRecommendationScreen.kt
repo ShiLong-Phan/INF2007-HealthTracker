@@ -315,13 +315,13 @@ fun MealRecommendationScreen(
         firestore.collection("users").document(userId)
             .get()
             .addOnSuccessListener { document ->
-                age = (document.getString("age")?.toInt() ?: 23)
+                age = document.getLong("age")?.toInt() ?: 0
                 gender = document.getString("gender") ?: "Male"
-                weight = document.getLong("weight")?.toInt() ?: 70
-                height = document.getLong("height")?.toInt() ?: 170
-                activityLevel = document.getString("activity_level") ?: "Moderate"
+                weight = document.getLong("weight")?.toInt() ?: 0
+                height = document.getLong("height")?.toInt() ?: 0
+                activityLevel = document.getString("activity_level") ?: "Sedentary"
                 dietaryPreference = document.getString("dietary_preference") ?: "None"
-                calorieIntake = document.getLong("calorie_intake")?.toInt() ?: 2000
+                calorieIntake = document.getLong("calorie_intake")?.toInt() ?: 0
                 fetchMealAndRestaurants()
             }
             .addOnFailureListener { exception ->
