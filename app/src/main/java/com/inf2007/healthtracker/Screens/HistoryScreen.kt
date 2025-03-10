@@ -14,9 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material.DismissDirection
 import androidx.compose.material.DismissValue
 import androidx.compose.material.ExperimentalMaterialApi
@@ -24,20 +24,32 @@ import androidx.compose.material.SwipeToDismiss
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.rememberDismissState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DisplayMode
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -59,7 +71,9 @@ import com.inf2007.healthtracker.utilities.BottomNavigationBar
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.Date
+import java.util.Calendar
 import androidx.compose.material.icons.filled.LocalDining
+import androidx.compose.material3.ButtonDefaults
 import com.inf2007.healthtracker.ui.theme.Primary
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
@@ -73,11 +87,37 @@ fun HistoryScreen(
     var filteredFoodEntries by remember { mutableStateOf<List<FoodEntry2>>(emptyList()) }
     var filteredStepsHistory by remember { mutableStateOf<List<StepsEntry>>(emptyList()) }
     var searchQuery by remember { mutableStateOf("") }
-    var isSearchActive by remember { mutableStateOf(false) } // Track search state
-    var pendingDeleteItem by remember { mutableStateOf<Any?>(null) } // For tracking the item to delete
+    var isSearchActive by remember { mutableStateOf(false) }
+    var isDateRangeSearch by remember { mutableStateOf(false) }
+    var pendingDeleteItem by remember { mutableStateOf<Any?>(null) }
     val currentUser = FirebaseAuth.getInstance().currentUser
 
-    // Date formatter to use for displaying and filtering dates
+    // Date range picker states
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
+
+    // Initialize with today and a week ago
+    val calendar = Calendar.getInstance()
+    val today = calendar.timeInMillis
+    calendar.add(Calendar.DAY_OF_YEAR, -7)
+    val weekAgo = calendar.timeInMillis
+
+    val startDatePickerState = rememberDatePickerState(initialSelectedDateMillis = null, initialDisplayMode = DisplayMode.Picker)
+    val endDatePickerState = rememberDatePickerState(initialSelectedDateMillis = null, initialDisplayMode = DisplayMode.Picker)
+
+    // Convert date picker states to actual dates
+    val startDate = startDatePickerState.selectedDateMillis?.let { Date(it) }
+    val endDate = endDatePickerState.selectedDateMillis?.let {
+        // Set end date to end of day (23:59:59)
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = it
+        cal.set(Calendar.HOUR_OF_DAY, 23)
+        cal.set(Calendar.MINUTE, 59)
+        cal.set(Calendar.SECOND, 59)
+        Date(cal.timeInMillis)
+    }
+
+    // Date formatter for display
     val dateFormatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
     val inputDateFormats = listOf(
         SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()),
@@ -88,8 +128,60 @@ fun HistoryScreen(
         SimpleDateFormat("d MMM yyyy", Locale.getDefault())
     )
 
-    val totalCalories = filteredFoodEntries.sumOf { it.caloricValue }
-    val totalSteps = filteredStepsHistory.sumOf { it.steps }
+    // Function to filter the history entries based on search mode
+    fun filterHistoryEntries() {
+        if (isDateRangeSearch && startDate != null && endDate != null) {
+            // Filter by date range
+            filteredFoodEntries = foodEntriesHistory.filter { entry ->
+                val entryDate = entry.timestamp?.toDate()
+                entryDate != null && entryDate >= startDate && entryDate <= endDate
+            }
+
+            filteredStepsHistory = stepsHistory.filter { entry ->
+                val entryDate = entry.timestamp?.toDate()
+                entryDate != null && entryDate >= startDate && entryDate <= endDate
+            }
+        } else if (!isDateRangeSearch && searchQuery.isNotEmpty()) {
+            // Filter by search query (specific date)
+            val lowerCaseQuery = searchQuery.lowercase()
+
+            filteredFoodEntries = foodEntriesHistory.filter { entry ->
+                inputDateFormats.any { format ->
+                    val date = entry.timestamp?.toDate()
+                    val formattedDate = date?.let { format.format(it).lowercase() }
+                    formattedDate?.contains(lowerCaseQuery) == true
+                }
+            }
+
+            filteredStepsHistory = stepsHistory.filter { entry ->
+                inputDateFormats.any { format ->
+                    val date = entry.timestamp?.toDate()
+                    val formattedDate = date?.let { format.format(it).lowercase() }
+                    formattedDate?.contains(lowerCaseQuery) == true
+                }
+            }
+        } else {
+            // No filters, show all
+            filteredFoodEntries = foodEntriesHistory
+            filteredStepsHistory = stepsHistory
+        }
+    }
+
+    fun clearDateRangeFilter() {
+        // Reset the DatePicker states to empty (null)
+        startDatePickerState.selectedDateMillis = null
+        endDatePickerState.selectedDateMillis = null
+
+        // Reset search states and criteria
+        isDateRangeSearch = false
+        searchQuery = ""
+
+        // Reset filtered lists to show all entries
+        filteredFoodEntries = foodEntriesHistory
+        filteredStepsHistory = stepsHistory
+    }
+
+
 
     LaunchedEffect(Unit) {
         currentUser?.let {
@@ -111,7 +203,7 @@ fun HistoryScreen(
                                 null
                             }
                         }
-                        filteredFoodEntries = foodEntriesHistory // Initially set filtered list as the entire list
+                        filterHistoryEntries()
                     }
                 }
 
@@ -133,37 +225,55 @@ fun HistoryScreen(
                                 null
                             }
                         }
-                        filteredStepsHistory = stepsHistory // Initially set filtered list as the entire list
+                        // Sort stepsHistory locally (just in case it's not sorted properly)
+                        stepsHistory = stepsHistory.sortedByDescending { it.timestamp?.toDate() }
+                        filterHistoryEntries()
                     }
                 }
         }
     }
 
-    // Function to filter the history entries strictly by date
-    fun filterHistoryEntries(query: String) {
-        if (query.isEmpty()) {
-            filteredFoodEntries = foodEntriesHistory
-            filteredStepsHistory = stepsHistory
-        } else {
-            val lowerCaseQuery = query.lowercase()
-
-            // Filter food entries by formatted date string
-            filteredFoodEntries = foodEntriesHistory.filter { entry ->
-                inputDateFormats.any { format ->
-                    val date = entry.timestamp?.toDate()
-                    val formattedDate = date?.let { format.format(it).lowercase() }
-                    formattedDate?.contains(lowerCaseQuery) == true
+    // Date picker dialog for start date
+    if (showStartDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showStartDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    showStartDatePicker = false
+                    filterHistoryEntries()
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStartDatePicker = false }) {
+                    Text("Cancel")
                 }
             }
+        ) {
+            DatePicker(state = startDatePickerState)
+        }
+    }
 
-            // Filter steps entries by formatted date string
-            filteredStepsHistory = stepsHistory.filter { entry ->
-                inputDateFormats.any { format ->
-                    val date = entry.timestamp?.toDate()
-                    val formattedDate = date?.let { format.format(it).lowercase() }
-                    formattedDate?.contains(lowerCaseQuery) == true
+    // Date picker dialog for end date
+    if (showEndDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showEndDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    showEndDatePicker = false
+                    filterHistoryEntries()
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEndDatePicker = false }) {
+                    Text("Cancel")
                 }
             }
+        ) {
+            DatePicker(state = endDatePickerState)
         }
     }
 
@@ -174,7 +284,10 @@ fun HistoryScreen(
                 modifier = Modifier.padding(horizontal = 24.dp),
                 actions = {
                     IconButton(onClick = { isSearchActive = !isSearchActive }) {
-                        Icon(Icons.Filled.Search, contentDescription = "Search")
+                        Icon(
+                            if (isSearchActive) Icons.Filled.Close else Icons.Filled.Search,
+                            contentDescription = if (isSearchActive) "Close Search" else "Search"
+                        )
                     }
                 }
             )
@@ -182,26 +295,134 @@ fun HistoryScreen(
         bottomBar = { BottomNavigationBar(navController) },
         containerColor = MaterialTheme.colorScheme.background,
         content = { paddingValues ->
-            // Inside your Scaffold's content lambda:
             Column(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // Show the search bar when active
+                // Show search options when search is active
                 if (isSearchActive) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { query ->
-                            searchQuery = query
-                            filterHistoryEntries(query) // Immediately filter as the user types
-                        },
-                        label = { Text("Search by Date") },
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        singleLine = true
-                    )
+                            .padding(16.dp)
+                    ) {
+                        // Search type toggle
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                            SegmentedButton(
+                                selected = !isDateRangeSearch,
+                                onClick = {
+                                    isDateRangeSearch = false
+                                    filterHistoryEntries()
+                                },
+                                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            ) {
+                                Text("Single Date")
+                            }
+                            SegmentedButton(
+                                selected = isDateRangeSearch,
+                                onClick = {
+                                    isDateRangeSearch = true
+                                    filterHistoryEntries()
+                                },
+                                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            ) {
+                                Text("Date Range")
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        if (isDateRangeSearch) {
+                            // Date range picker UI
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                // Start date field
+                                OutlinedTextField(
+                                    value = startDate?.let { dateFormatter.format(it) } ?: "",
+                                    onValueChange = { },
+                                    readOnly = true,
+                                    label = { Text("Start Date") },
+                                    modifier = Modifier.weight(1f),
+                                    trailingIcon = {
+                                        IconButton(onClick = { showStartDatePicker = true }) {
+                                            Icon(Icons.Filled.CalendarMonth, "Select start date")
+                                        }
+                                    }
+                                )
+
+                                Spacer(modifier = Modifier.width(16.dp))
+
+                                // End date field
+                                OutlinedTextField(
+                                    value = endDate?.let { dateFormatter.format(it) } ?: "",
+                                    onValueChange = { },
+                                    readOnly = true,
+                                    label = { Text("End Date") },
+                                    modifier = Modifier.weight(1f),
+                                    trailingIcon = {
+                                        IconButton(onClick = { showEndDatePicker = true }) {
+                                            Icon(Icons.Filled.CalendarMonth, "Select end date")
+                                        }
+                                    }
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Row for Apply and Clear buttons
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Apply filter button
+                                Button(
+                                    onClick = { filterHistoryEntries() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Apply Filter")
+                                }
+
+                                // Clear filter button
+                                Button(
+                                    onClick = { clearDateRangeFilter() },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondary
+                                    )
+                                ) {
+                                    Text("Clear Filter")
+                                }
+                            }
+                        } else {
+                            // Single date search
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { query ->
+                                    searchQuery = query
+                                    filterHistoryEntries()
+                                },
+                                label = { Text("Search by Date") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                trailingIcon = {
+                                    if (searchQuery.isNotEmpty()) {
+                                        IconButton(onClick = {
+                                            searchQuery = ""
+                                            filterHistoryEntries()
+                                        }) {
+                                            Icon(
+                                                Icons.Filled.Close,
+                                                contentDescription = "Clear"
+                                            )
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
                 }
 
                 if (foodEntriesHistory.isEmpty() && stepsHistory.isEmpty()) {
@@ -210,7 +431,7 @@ fun HistoryScreen(
                     }
                 } else if (filteredFoodEntries.isEmpty() && filteredStepsHistory.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No history found.")
+                        Text("No history found for the selected date range.")
                     }
                 } else {
                     // Calculate the totals from the filtered lists
@@ -233,10 +454,28 @@ fun HistoryScreen(
                             TotalCard(totalCaloriesfiltered, totalStepsfiltered)
                         }
 
+                        // Date range info when filter is active
+                        if (isDateRangeSearch && startDate != null && endDate != null) {
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Text(
+                                            "Date Range: ${dateFormatter.format(startDate)} - ${dateFormatter.format(endDate)}",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
                         item {
                             Text("Food Entries History", style = MaterialTheme.typography.titleLarge)
                         }
-                        if (foodEntriesHistory.isEmpty()) {
+
+                        if (filteredFoodEntries.isEmpty()) {
                             item {
                                 Text("No food entries found.", style = MaterialTheme.typography.bodyLarge)
                             }
@@ -292,10 +531,12 @@ fun HistoryScreen(
                                 }
                             }
                         }
+
                         item {
                             Spacer(modifier = Modifier.height(24.dp))
                             Text("Steps History", style = MaterialTheme.typography.titleLarge)
                         }
+
                         if (filteredStepsHistory.isEmpty()) {
                             item {
                                 Text("No steps data found.", style = MaterialTheme.typography.bodyLarge)
@@ -437,7 +678,6 @@ fun StepsHistoryCard(entry: StepsEntry, dateFormatter: SimpleDateFormat) {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("${entry.steps}", style = MaterialTheme.typography.titleMedium)
-
             }
 
             Text("Date: $dateString", style = MaterialTheme.typography.bodySmall)
@@ -452,11 +692,9 @@ fun TotalCard(totalCalories: Int, totalSteps: Int) {
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = MaterialTheme.shapes.small,
         colors = CardDefaults.cardColors(containerColor = Primary, contentColor = MaterialTheme.colorScheme.onPrimary),
-
-        ) {
+    ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            //horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Row for Total Calories
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -489,7 +727,6 @@ fun TotalCard(totalCalories: Int, totalSteps: Int) {
             }
         }
     }
-
 }
 
 // Data classes for Firestore documents
