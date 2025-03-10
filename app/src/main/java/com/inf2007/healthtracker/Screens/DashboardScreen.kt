@@ -92,7 +92,7 @@ fun DashboardScreen(
     // ---------------------------
 
     val dailyStepGoal = if (desiredSteps != 0) desiredSteps else 10000
-    val dailyCalorieGoal = desiredCalorieIntake
+    val dailyCalorieGoal = if (desiredCalorieIntake != 0) desiredCalorieIntake else 2000
     val dailyHydrationGoal = if (desiredHydration != 0) desiredHydration else 3200
 
     val coroutineScope = rememberCoroutineScope()

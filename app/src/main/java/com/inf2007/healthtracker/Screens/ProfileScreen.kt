@@ -17,6 +17,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.BottomNavigation
 import androidx.compose.material.BottomNavigationItem
 import androidx.compose.material.icons.Icons
@@ -36,6 +38,7 @@ import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Scale
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import com.inf2007.healthtracker.utilities.BottomNavigationBar
@@ -342,8 +345,9 @@ fun ProfileScreen(
 
                                 Spacer(modifier = Modifier.weight(1f))  // Pushes the value to the right
 
+                                // Display Calorie Intake with fallback to "Not Set"
                                 Text(
-                                    text = "$calorieIntake kcal",
+                                    text = if (calorieIntake.toIntOrNull() == 0 || calorieIntake.isEmpty()) "Not Set" else "$calorieIntake kcal",
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                             }
@@ -398,8 +402,9 @@ fun ProfileScreen(
 
                                 Spacer(modifier = Modifier.weight(1f))  // Pushes the value to the right
 
+                                // Display Steps Goal with fallback to "Not Set"
                                 Text(
-                                    text = "$stepsGoal steps",
+                                    text = if (stepsGoal.toIntOrNull() == 0 || stepsGoal.isEmpty()) "Not Set" else "$stepsGoal steps",
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                             }
@@ -425,8 +430,9 @@ fun ProfileScreen(
 
                                 Spacer(modifier = Modifier.weight(1f))  // Pushes the value to the right
 
+                                // Display Hydration Goal with fallback to "Not Set"
                                 Text(
-                                    text = "$hydrationGoal ml",
+                                    text = if (hydrationGoal.toIntOrNull() == 0 || hydrationGoal.isEmpty()) "Not Set" else "$hydrationGoal ml",
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                             }
@@ -507,7 +513,7 @@ fun ProfileScreen(
                             // Age Text Field
                             OutlinedTextField(
                                 value = userAge,
-                                onValueChange = { userAge = it },
+                                onValueChange = { userAge = it.filter { char -> char.isDigit() } },
                                 label = { Text("Age") },
                                 leadingIcon = {
                                     Icon(
@@ -519,6 +525,10 @@ fun ProfileScreen(
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = Primary,
                                     unfocusedBorderColor = Unfocused
+                                ),
+                                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                                keyboardActions = KeyboardActions(
+                                    onDone = { /* Handle done action */ }
                                 ),
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -565,7 +575,7 @@ fun ProfileScreen(
                                     // Calorie Intake Text Field
                                     OutlinedTextField(
                                         value = calorieIntake,
-                                        onValueChange = { calorieIntake = it },
+                                        onValueChange = { calorieIntake = it.filter { char -> char.isDigit() } },
                                         label = { Text("Calorie Intake (kcal)") },
                                         leadingIcon = {
                                             Icon(
@@ -577,6 +587,10 @@ fun ProfileScreen(
                                         colors = OutlinedTextFieldDefaults.colors(
                                             focusedBorderColor = Primary,
                                             unfocusedBorderColor = Unfocused
+                                        ),
+                                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                                        keyboardActions = KeyboardActions(
+                                            onDone = { /* Handle done action */ }
                                         ),
                                         modifier = Modifier.fillMaxWidth()
                                     )
@@ -594,7 +608,7 @@ fun ProfileScreen(
 
                                     OutlinedTextField(
                                         value = stepsGoal,
-                                        onValueChange = { stepsGoal = it },
+                                        onValueChange = { stepsGoal = it.filter { char -> char.isDigit() } },
                                         label = { Text("Steps") }, // Label without the guide text
                                         leadingIcon = {
                                             Icon(
@@ -607,6 +621,10 @@ fun ProfileScreen(
                                             focusedBorderColor = Primary,
                                             unfocusedBorderColor = Unfocused
                                         ),
+                                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                                        keyboardActions = KeyboardActions(
+                                            onDone = { /* Handle done action */ }
+                                        ),
                                         modifier = Modifier.fillMaxWidth()
                                     )
 
@@ -618,7 +636,7 @@ fun ProfileScreen(
                                 ) {
                                     OutlinedTextField(
                                         value = hydrationGoal,
-                                        onValueChange = { hydrationGoal = it },
+                                        onValueChange = { hydrationGoal = it.filter { char -> char.isDigit() } },
                                         label = { Text("Hydration") }, // Label without the guide text
                                         leadingIcon = {
                                             Icon(
@@ -630,6 +648,10 @@ fun ProfileScreen(
                                         colors = OutlinedTextFieldDefaults.colors(
                                             focusedBorderColor = Primary,
                                             unfocusedBorderColor = Unfocused
+                                        ),
+                                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                                        keyboardActions = KeyboardActions(
+                                            onDone = { /* Handle done action */ }
                                         ),
                                         modifier = Modifier.fillMaxWidth()
                                     )
@@ -645,7 +667,7 @@ fun ProfileScreen(
                                 // Weight Text Field
                                 OutlinedTextField(
                                     value = weight,
-                                    onValueChange = { weight = it },
+                                    onValueChange = { weight = it.filter { char -> char.isDigit() } },
                                     label = { Text("Weight (kg)") },
                                     leadingIcon = {
                                         Icon(
@@ -658,13 +680,17 @@ fun ProfileScreen(
                                         focusedBorderColor = Primary,
                                         unfocusedBorderColor = Unfocused
                                     ),
+                                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                                    keyboardActions = KeyboardActions(
+                                        onDone = { /* Handle done action */ }
+                                    ),
                                     modifier = Modifier.weight(1f)
                                 )
 
                                 // Height Text Field
                                 OutlinedTextField(
                                     value = height,
-                                    onValueChange = { height = it },
+                                    onValueChange = { height = it.filter { char -> char.isDigit() } },
                                     label = { Text("Height (cm)") },
                                     leadingIcon = {
                                         Icon(
@@ -676,6 +702,10 @@ fun ProfileScreen(
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = Primary,
                                         unfocusedBorderColor = Unfocused
+                                    ),
+                                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                                    keyboardActions = KeyboardActions(
+                                        onDone = { /* Handle done action */ }
                                     ),
                                     modifier = Modifier.weight(1f)
                                 )
