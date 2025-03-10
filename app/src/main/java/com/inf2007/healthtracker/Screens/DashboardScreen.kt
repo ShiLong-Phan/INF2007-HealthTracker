@@ -339,7 +339,7 @@ fun DashboardScreen(
         ) {
             // Header
             Text(
-                "Your Daily Summary",
+                "Daily Summary",
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center,
                 color = Primary
