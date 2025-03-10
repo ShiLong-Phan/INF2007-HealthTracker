@@ -47,8 +47,15 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.DismissDirection
+import androidx.compose.material.DismissValue
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.SwipeToDismiss
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.rememberDismissState
 import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -64,7 +71,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import org.json.JSONObject
 import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun DashboardScreen(
     navController: NavController,
@@ -83,6 +90,8 @@ fun DashboardScreen(
     var foodEntries by remember { mutableStateOf<List<FoodEntry>>(emptyList()) }
     var weeklyDates by remember { mutableStateOf(emptyList<String>()) }
     var weeklyCalories by remember { mutableStateOf(listOf(0, 0, 0, 0, 0, 0, 0)) }
+    var showDialog by remember { mutableStateOf(false) } // To show confirmation dialog
+    var entryToDelete by remember { mutableStateOf<FoodEntry?>(null) } // To track which entry is being deleted
 
     // ---------------------------
     // New states for date selection:
@@ -106,6 +115,45 @@ fun DashboardScreen(
     val stepsRef = firestore.collection("steps").document("${user?.uid}_${formattedDate}")
 
     val geminiService = remember { GeminiService(BuildConfig.geminiApiKey) }
+
+    // Function to delete the food entry
+    fun deleteFoodEntry(entry: FoodEntry) {
+        val firestore = FirebaseFirestore.getInstance()
+        firestore.collection("foodEntries")
+            .document(entry.id)
+            .delete()
+            .addOnSuccessListener {
+                // Optionally, remove it from the local foodEntries state
+                foodEntries = foodEntries.filter { it.id != entry.id }
+            }
+            .addOnFailureListener { exception ->
+                Log.e("DashboardScreen", "Error deleting food entry: ${exception.message}")
+            }
+    }
+
+    // Show confirmation dialog for deletion
+    if (showDialog && entryToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Delete Food Entry") },
+            text = { Text("Are you sure you want to delete this food entry?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        entryToDelete?.let { deleteFoodEntry(it) }
+                        showDialog = false // Close the dialog after deletion
+                    }
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     // Fetch user data from Firestore (for general settings)
     LaunchedEffect(Unit) {
@@ -285,6 +333,8 @@ fun DashboardScreen(
                 }
         }
     }
+
+
 
 
     // DatePickerDialog display:
@@ -474,7 +524,45 @@ fun DashboardScreen(
                     modifier = Modifier.padding(horizontal = 24.dp)
                 ) {
                     foodEntries.forEach { entry ->
-                        FoodEntryCard(entry)
+                        // Wrap the FoodEntryCard in SwipeToDismiss
+                        val dismissState = rememberDismissState(
+                            confirmStateChange = { dismissValue ->
+                                if (dismissValue == DismissValue.DismissedToStart) {
+                                    // Set the entry to be deleted and show confirmation dialog
+                                    entryToDelete = entry
+                                    showDialog = true
+                                }
+                                false // Prevent auto-dismiss after action
+                            }
+                        )
+
+                        SwipeToDismiss(
+                            state = dismissState,
+                            directions = setOf(DismissDirection.EndToStart),
+                            background = {
+                                val color = if (dismissState.targetValue == DismissValue.Default)
+                                    MaterialTheme.colorScheme.surface
+                                else
+                                    MaterialTheme.colorScheme.error
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(color)
+                                        .padding(8.dp),
+                                    contentAlignment = Alignment.CenterEnd
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete",
+                                        tint = MaterialTheme.colorScheme.onError
+                                    )
+                                }
+                            },
+                            dismissContent = {
+                                FoodEntryCard(entry)
+                            }
+                        )
                     }
                 }
             }
@@ -1109,3 +1197,5 @@ fun WeeklyCalorieBarChart(
         }
     }
 }
+
+

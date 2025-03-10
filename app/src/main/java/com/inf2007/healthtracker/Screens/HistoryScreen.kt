@@ -391,7 +391,8 @@ fun HistoryScreen(
 
 @Composable
 fun FoodEntryHistoryCard(entry: FoodEntry2, dateFormatter: SimpleDateFormat) {
-    val dateString = entry.timestamp?.toDate()?.let { dateFormatter.format(it) } ?: "No date"
+    val dateTimeFormatter = SimpleDateFormat("MMM d, yyyy hh:mm a", Locale.getDefault())
+    val dateString = entry.timestamp?.toDate()?.let { dateTimeFormatter.format(it) } ?: "No date"
 
     Card(
         modifier = Modifier.fillMaxWidth(),
