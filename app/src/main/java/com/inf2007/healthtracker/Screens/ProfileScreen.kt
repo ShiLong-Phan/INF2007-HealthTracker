@@ -63,7 +63,8 @@ fun ProfileScreen(
     var userAge by remember { mutableStateOf("") }
     var weight by remember { mutableStateOf("") }
     var height by remember { mutableStateOf("") }
-    var activityLevel by remember { mutableStateOf("Sedentary") }
+    var activityLevel by remember { mutableStateOf("") }
+    var originalActivityLevel by remember { mutableStateOf(activityLevel) }
     var dietaryPreference by remember { mutableStateOf("") }
     var calorieIntake by remember { mutableStateOf("") }
     var stepsGoal by remember { mutableStateOf("") }
@@ -92,6 +93,7 @@ fun ProfileScreen(
                     weight = document.getLong("weight")?.toString() ?: "0"  // Ensure weight is treated as a number
                     height = document.getLong("height")?.toString() ?: "0"  // Ensure height is treated as a number
                     activityLevel = document.getString("activity_level") ?: "Not Set"
+                    originalActivityLevel = activityLevel
                     dietaryPreference = document.getString("dietary_preference") ?: "None"
                     calorieIntake = document.getLong("calorie_intake")?.toString() ?: "0"  // Ensure calorieIntake is treated as a number
                     stepsGoal = document.getLong("steps_goal")?.toString() ?: "0"  // Ensure stepsGoal is treated as a number
@@ -812,7 +814,10 @@ fun ProfileScreen(
                             ){
                                 // Cancel Changes Button
                                 Button(
-                                    onClick = { isEditing = false },
+                                    onClick = {
+                                        isEditing = false
+                                        activityLevel = originalActivityLevel
+                                    },
                                     shape = roundedShape,
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.background, contentColor = Primary, ),
                                     border = BorderStroke(1.dp, Primary),
