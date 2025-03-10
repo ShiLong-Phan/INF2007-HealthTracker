@@ -475,7 +475,12 @@ fun FoodEntryCard(entry: FoodEntry) {
  */
 @Composable
 fun DailyGoalProgress(statLabel: String, currentValue: Int, goalValue: Int, unit: String) {
-    val progressFraction = min(currentValue.toFloat() / goalValue, 1f)
+    val progressFraction = if (goalValue != 0) {
+        min(currentValue.toFloat() / goalValue, 1f)
+    } else {
+        0f // Avoid division by zero, set progress to 0
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
