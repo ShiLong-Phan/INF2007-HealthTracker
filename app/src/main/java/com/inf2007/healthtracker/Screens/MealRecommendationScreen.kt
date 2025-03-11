@@ -59,6 +59,7 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -1054,10 +1055,15 @@ fun MealRecommendationScreen(
                                     firestore.collection("mealHistory")
                                         .add(mealHistoryData)
                                         .addOnSuccessListener {
-                                            showSuccessMessage = true
                                             isSaving = false
+                                            showSuccessMessage = true
+
+                                            // Show success animation, then navigate after delay
                                             coroutineScope.launch {
-                                                snackbarHostState.showSnackbar("Meal history saved successfully!")
+                                                // Wait for animation to display
+                                                delay(1500)
+                                                // Navigate to history screen
+                                                navController.navigate("meal_plan_history_screen")
                                             }
                                         }
                                         .addOnFailureListener { e ->
@@ -1075,26 +1081,39 @@ fun MealRecommendationScreen(
                 }
 
                 // Show scroll to top button when scrolled down
+                // Success message overlay
                 AnimatedVisibility(
-                    visible = listState.canScrollBackward,
+                    visible = showSuccessMessage,
                     enter = fadeIn() + scaleIn(),
-                    exit = fadeOut() + scaleOut()
+                    exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.Center)
                 ) {
-                    FloatingActionButton(
-                        onClick = {
-                            coroutineScope.launch {
-                                listState.animateScrollToItem(0)
-                            }
-                        },
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(16.dp),
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.KeyboardArrowUp,
-                            contentDescription = "Scroll to top"
+                    Card(
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        ),
+                        elevation = CardDefaults.cardElevation(
+                            defaultElevation = 8.dp
                         )
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Success",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "Meal plan saved successfully!",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                     }
                 }
             }
