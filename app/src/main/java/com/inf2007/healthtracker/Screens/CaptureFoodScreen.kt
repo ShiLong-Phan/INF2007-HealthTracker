@@ -75,7 +75,7 @@ fun CaptureFoodScreen(navController: NavController) {
     // Initialize ImageUtils for handling gallery images
     val imageUtils = remember { ImageUtils(context) }
 
-    // Function to identify food from image
+    // Function to identify food from image with improved error handling
     fun identifyFoodFromImage(image: Bitmap?) {
         if (image == null) {
             errorMessage = "Please provide an image to identify food"
@@ -87,7 +87,8 @@ fun CaptureFoodScreen(navController: NavController) {
 
         coroutineScope.launch {
             try {
-                // First identify the food from the image
+                // First identify the food from the image using our improved service
+                Log.i("CaptureFoodScreen", "Starting food identification...")
                 val identificationResult = geminiService.identifyFood(image)
                 Log.i("CaptureFoodScreen", "Food identification result: $identificationResult")
 
@@ -104,27 +105,39 @@ fun CaptureFoodScreen(navController: NavController) {
                     ).show()
 
                     // Now get calories with the identified food
+                    Log.i("CaptureFoodScreen", "Starting calorie recognition for $foodName")
                     val result = geminiService.doFoodRecognition(image, foodName)
                     Log.i("CaptureFoodScreen", "Food recognition result: $result")
 
+                    // Extract calorie value using regex for more reliability
                     val responseText = result.firstOrNull() ?: ""
-                    val estimatedCaloricValue = responseText.filter { it.isDigit() }.toIntOrNull() ?: 0
+                    val calorieRegex = Regex("Calories:\\s*(\\d+)\\s*kcal", RegexOption.IGNORE_CASE)
+                    val matchResult = calorieRegex.find(responseText)
+
+                    val estimatedCaloricValue = if (matchResult != null) {
+                        matchResult.groupValues[1].toIntOrNull() ?: 0
+                    } else {
+                        responseText.filter { it.isDigit() }.toIntOrNull() ?: 0
+                    }
+
                     Log.i("CaptureFoodScreen", "Food recognition caloric value: $estimatedCaloricValue")
 
-                    recognizedFood = result.firstOrNull()?.let { Pair(it, estimatedCaloricValue) }
+                    recognizedFood = Pair(responseText, estimatedCaloricValue)
                     caloricValue = estimatedCaloricValue.toString()
                 } else {
                     errorMessage = "Could not identify food from image. Please enter food name manually."
+                    Log.w("CaptureFoodScreen", "Food identification failed: $identifiedFoodName")
                 }
                 isProcessing = false
             } catch (e: Exception) {
+                Log.e("CaptureFoodScreen", "Error in food identification process", e)
                 errorMessage = "Error identifying food: ${e.message}"
                 isProcessing = false
             }
         }
     }
 
-    // Function to handle food recognition
+    // Improved function to handle food recognition
     fun recognizeFood(image: Bitmap?, foodName: String) {
         if (image == null && foodName.isBlank()) {
             errorMessage = "Please enter food name or provide an image"
@@ -136,17 +149,29 @@ fun CaptureFoodScreen(navController: NavController) {
 
         coroutineScope.launch {
             try {
+                Log.i("CaptureFoodScreen", "Starting calorie recognition for: $foodName")
                 val result = geminiService.doFoodRecognition(image, foodName)
                 Log.i("CaptureFoodScreen", "Food recognition result: $result")
 
                 val responseText = result.firstOrNull() ?: ""
-                val estimatedCaloricValue = responseText.filter { it.isDigit() }.toIntOrNull() ?: 0
+
+                // Extract calorie value using regex for more reliability
+                val calorieRegex = Regex("Calories:\\s*(\\d+)\\s*kcal", RegexOption.IGNORE_CASE)
+                val matchResult = calorieRegex.find(responseText)
+
+                val estimatedCaloricValue = if (matchResult != null) {
+                    matchResult.groupValues[1].toIntOrNull() ?: 0
+                } else {
+                    responseText.filter { it.isDigit() }.toIntOrNull() ?: 0
+                }
+
                 Log.i("CaptureFoodScreen", "Food recognition caloric value: $estimatedCaloricValue")
 
-                recognizedFood = result.firstOrNull()?.let { Pair(it, estimatedCaloricValue) }
+                recognizedFood = Pair(responseText, estimatedCaloricValue)
                 caloricValue = estimatedCaloricValue.toString()
                 isProcessing = false
             } catch (e: Exception) {
+                Log.e("CaptureFoodScreen", "Error recognizing food", e)
                 errorMessage = "Error recognizing food: ${e.message}"
                 isProcessing = false
             }

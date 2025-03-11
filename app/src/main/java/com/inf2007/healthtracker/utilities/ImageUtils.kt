@@ -3,31 +3,80 @@ package com.inf2007.healthtracker.utilities
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
+import android.graphics.Paint
 import android.media.ExifInterface
 import android.net.Uri
 import android.os.Build
+import android.renderscript.Allocation
+import android.renderscript.Element
+import android.renderscript.RenderScript
+import android.renderscript.ScriptIntrinsicBlur
 import android.util.Log
 import androidx.core.graphics.scale
 import java.io.IOException
 import java.io.InputStream
+import kotlin.math.min
 
 class ImageUtils(private val context: Context) {
 
     /**
-     * Convert a URI to a Bitmap
-     * Handles orientation issues with gallery images
+     * Convert a URI to a Bitmap optimized for vision AI
+     * Handles orientation issues with gallery images and optimizes quality
      */
     fun uriToBitmap(uri: Uri): Bitmap {
         val inputStream = context.contentResolver.openInputStream(uri)
-        val originalBitmap = BitmapFactory.decodeStream(inputStream)
+
+        // Use BitmapFactory options to get image size first without loading full bitmap
+        val options = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        BitmapFactory.decodeStream(inputStream, null, options)
         inputStream?.close()
+
+        // Calculate appropriate sample size to avoid OOM
+        val sampleSize = calculateSampleSize(options, 1024, 1024)
+
+        // Load bitmap with sample size
+        val secondStream = context.contentResolver.openInputStream(uri)
+        val loadOptions = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+            inPreferredConfig = Bitmap.Config.ARGB_8888 // Higher quality
+        }
+        val originalBitmap = BitmapFactory.decodeStream(secondStream, null, loadOptions)
+            ?: throw IOException("Failed to decode bitmap")
+        secondStream?.close()
 
         // Get orientation information if available
         val rotatedBitmap = getRotatedBitmap(uri, originalBitmap)
 
-        // Resize if the image is too large (to prevent OOM errors and improve performance)
-        return resizeBitmapIfNeeded(rotatedBitmap)
+        // Optimize bitmap for vision models
+        return optimizeForVisionAI(rotatedBitmap)
+    }
+
+    /**
+     * Calculate appropriate sample size for loading large images
+     */
+    private fun calculateSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+        val height = options.outHeight
+        val width = options.outWidth
+        var inSampleSize = 1
+
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight = height / 2
+            val halfWidth = width / 2
+
+            // Calculate the largest inSampleSize value that is a power of 2 and keeps both
+            // height and width larger than the requested height and width.
+            while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+
+        return inSampleSize
     }
 
     /**
@@ -82,14 +131,61 @@ class ImageUtils(private val context: Context) {
     }
 
     /**
-     * Resizes bitmap if it's too large
-     * Prevents OOM errors and improves performance with large images
+     * Optimize bitmap specifically for vision AI models like Gemini
+     * - Proper resizing for model input
+     * - Enhanced contrast and color for better recognition
      */
-    private fun resizeBitmapIfNeeded(bitmap: Bitmap): Bitmap {
-        val maxDimension = 1024 // Maximum width or height
+    fun optimizeForVisionAI(bitmap: Bitmap): Bitmap {
+        // First resize if needed (target 1024px max dimension while maintaining aspect ratio)
+        val resizedBitmap = resizeBitmapForVisionAI(bitmap)
+
+        // Create a new bitmap to apply enhancements
+        val enhancedBitmap = Bitmap.createBitmap(resizedBitmap.width, resizedBitmap.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(enhancedBitmap)
+
+        // Apply slight enhancement to contrast and saturation for food image quality
+        val paint = Paint()
+        val colorMatrix = ColorMatrix()
+
+        // Increase contrast slightly (1.1f)
+        colorMatrix.set(floatArrayOf(
+            1.1f, 0f, 0f, 0f, 0f,
+            0f, 1.1f, 0f, 0f, 0f,
+            0f, 0f, 1.1f, 0f, 0f,
+            0f, 0f, 0f, 1f, 0f
+        ))
+
+        // Create a temporary saturation matrix
+        val saturationMatrix = ColorMatrix()
+        // Increase saturation slightly (1.2f)
+        saturationMatrix.setSaturation(1.2f)
+
+        // Apply the saturation after the contrast adjustment
+        colorMatrix.postConcat(saturationMatrix)
+
+        paint.colorFilter = ColorMatrixColorFilter(colorMatrix)
+        canvas.drawBitmap(resizedBitmap, 0f, 0f, paint)
+
+        // If we created a new bitmap, recycle the original to free memory
+        if (resizedBitmap != bitmap) {
+            resizedBitmap.recycle()
+        }
+
+        return enhancedBitmap
+    }
+
+    /**
+     * Resize bitmap to appropriate dimensions for vision AI models
+     * Target resolution should be high enough for details but not excessively large
+     */
+    private fun resizeBitmapForVisionAI(bitmap: Bitmap): Bitmap {
         val width = bitmap.width
         val height = bitmap.height
 
+        // Best practice for Gemini Vision models: aim for 1024px on the longest side
+        val maxDimension = 1024
+
+        // Check if resize is needed
         if (width <= maxDimension && height <= maxDimension) {
             return bitmap
         }
@@ -107,17 +203,14 @@ class ImageUtils(private val context: Context) {
             newWidth = (maxDimension * aspectRatio).toInt()
         }
 
-        return bitmap.scale(newWidth, newHeight)
+        return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
     }
 
     /**
      * Process image specifically for food recognition
-     * - Enhances contrast and saturation
-     * - Centers food in frame where possible
+     * - Enhanced for better food detail visibility
      */
     fun processForFoodRecognition(bitmap: Bitmap): Bitmap {
-        // This would contain more advanced processing if needed
-        // For now, just resize if needed to ensure it's not too large
-        return resizeBitmapIfNeeded(bitmap)
+        return optimizeForVisionAI(bitmap)
     }
 }
