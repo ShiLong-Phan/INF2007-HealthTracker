@@ -47,6 +47,252 @@ import com.inf2007.healthtracker.utilities.ImageUtils
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.common.InputImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.GET
+import retrofit2.http.Path
+import retrofit2.http.Query
+
+// Food Database API Interface
+interface FoodDatabaseApi {
+    @GET("product/{barcode}.json")
+    suspend fun getProductByBarcode(
+        @Path("barcode") barcode: String
+    ): FoodProductResponse
+}
+
+// Response models
+data class FoodProductResponse(
+    val status: Int,
+    val product: FoodProduct?
+)
+
+data class FoodProduct(
+    val product_name: String,
+    val brands: String?,
+    val nutriments: Nutriments?,
+    val quantity: String?
+)
+
+data class Nutriments(
+    val energy_value: Float?,
+    val energy_kcal_100g: Float?,
+    val energy_kcal: Float?,
+    val energy_kcal_serving: Float?,
+    val energy_kcal_value: Float?,
+    val calories: Float?,
+    val energy: Float?,               // Some products use this format for energy in kJ
+    val energy_100g: Float?,          // Energy per 100g in kJ
+    val energy_unit: String?,         // Can be "kJ" or "kcal"
+    val serving_size: String?
+) {
+    override fun toString(): String {
+        return "Nutriments(energy_value=$energy_value, energy_kcal_100g=$energy_kcal_100g, " +
+                "energy_kcal=$energy_kcal, energy_kcal_serving=$energy_kcal_serving, " +
+                "energy_kcal_value=$energy_kcal_value, calories=$calories, " +
+                "energy=$energy, energy_100g=$energy_100g, energy_unit=$energy_unit, " +
+                "serving_size=$serving_size)"
+    }
+}
+
+// Food Database Service
+object FoodDatabaseService {
+    private const val BASE_URL = "https://world.openfoodfacts.org/api/v0/"
+
+    private val retrofit = Retrofit.Builder()
+        .baseUrl(BASE_URL)
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+
+    private val foodApi = retrofit.create(FoodDatabaseApi::class.java)
+
+    suspend fun getProductByBarcode(barcode: String): ProductInfo? {
+        return try {
+            val response = foodApi.getProductByBarcode(barcode)
+            if (response.status == 1 && response.product != null) {
+                val product = response.product
+                val nutriments = product.nutriments
+
+                // Try to get serving-specific calories first, then fall back to per 100g values
+                val isPerServing = nutriments?.energy_kcal_serving != null ||
+                        nutriments?.energy_kcal_value != null
+
+                // Per serving or per 100g calories - priority order for extracting calories
+                // First, check if energy_unit is kcal and energy_value exists
+                val perUnitCalories = if (nutriments?.energy_unit == "kcal" && nutriments.energy_value != null) {
+                    // Direct kcal value
+                    nutriments.energy_value
+                } else {
+                    // Fall back to other fields
+                    nutriments?.energy_kcal_serving // Calories per serving
+                        ?: nutriments?.energy_kcal_value // Sometimes used for per serving
+                        ?: nutriments?.calories // Generic calories field
+                        ?: nutriments?.energy_kcal_100g // Fallback to 100g
+                        ?: nutriments?.energy_kcal // Another variant of energy in kcal
+                        ?: if (nutriments?.energy_unit == "kJ" && nutriments.energy_value != null) {
+                            // Convert kJ to kcal if energy_unit is explicitly "kJ"
+                            nutriments.energy_value / 4.184f
+                        } else if (nutriments?.energy != null) {
+                            // Assuming energy is in kJ if no unit specified
+                            nutriments.energy / 4.184f
+                        } else if (nutriments?.energy_100g != null) {
+                            // Assuming energy_100g is in kJ if no unit specified
+                            nutriments.energy_100g / 4.184f
+                        } else {
+                            0f
+                        }
+                }
+
+                // Debug info
+                Log.d("FoodDatabaseService", "Nutriment data: ${nutriments.toString()}")
+                Log.d("FoodDatabaseService", "Per unit calories (raw): $perUnitCalories")
+
+                val servingSizeInfo = nutriments?.serving_size
+                val productQuantity = product.quantity
+
+                // Calculate total calories for the entire package
+                var totalCalories: Int? = null
+
+                // If we have the product quantity and it's in a parsable format
+                if (!productQuantity.isNullOrBlank()) {
+                    try {
+                        // Parse the quantity - this is simplified and would need more robust parsing
+                        // for all possible formats (g, kg, ml, L, etc.)
+                        val quantityRegex = Regex("(\\d+(?:\\.\\d+)?)\\s*(g|ml|kg|l)", RegexOption.IGNORE_CASE)
+                        val match = quantityRegex.find(productQuantity)
+
+                        if (match != null) {
+                            val amount = match.groupValues[1].toFloatOrNull() ?: 0f
+                            val unit = match.groupValues[2].lowercase()
+
+                            // Convert to base unit (g or ml)
+                            val baseAmount = when (unit) {
+                                "kg" -> amount * 1000
+                                "l" -> amount * 1000
+                                else -> amount
+                            }
+
+                            // Calculate total calories
+                            totalCalories = if (isPerServing && !servingSizeInfo.isNullOrBlank()) {
+                                // If we have per serving info, we need serving size and servings per package
+                                // This is a very rough approximation and would need better parsing
+                                val servingRegex = Regex("(\\d+(?:\\.\\d+)?)\\s*(g|ml)", RegexOption.IGNORE_CASE)
+                                val servingMatch = servingRegex.find(servingSizeInfo)
+
+                                if (servingMatch != null) {
+                                    val servingAmount = servingMatch.groupValues[1].toFloatOrNull() ?: 0f
+                                    val servingsPerPackage = baseAmount / servingAmount
+                                    (perUnitCalories * servingsPerPackage).toInt()
+                                } else null
+                            } else {
+                                // If per 100g/ml, calculate based on total weight/volume
+                                val calculatedCalories = (perUnitCalories * baseAmount / 100).toInt()
+                                Log.d("FoodDatabaseService", "Calculated total calories: $calculatedCalories (perUnit: $perUnitCalories × weight: $baseAmount ÷ 100)")
+                                calculatedCalories
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("FoodDatabaseService", "Error calculating total calories", e)
+                    }
+                } else if (nutriments?.energy_kcal != null) {
+                    // Some products might directly store total calories in energy_kcal
+                    totalCalories = nutriments.energy_kcal.toInt()
+                }
+
+                // Get product name with brand if available
+                val name = if (product.product_name.contains(product.brands ?: "")) {
+                    product.product_name
+                } else {
+                    val brand = product.brands
+                    if (!brand.isNullOrBlank()) {
+                        "${product.brands} - ${product.product_name}"
+                    } else {
+                        product.product_name
+                    }
+                }
+
+                val finalCalories = totalCalories ?: perUnitCalories.toInt()
+
+                Log.d("FoodDatabaseService", "Final product info - Name: $name, Calories: $finalCalories, Total Calories: $totalCalories")
+
+                ProductInfo(
+                    productName = name,
+                    calories = finalCalories,
+                    servingSize = servingSizeInfo,
+                    isPerServing = isPerServing,
+                    perUnitCalories = perUnitCalories.toInt(),
+                    totalQuantity = productQuantity,
+                    totalCalories = totalCalories
+                )
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.e("FoodDatabaseService", "Error fetching product data", e)
+            null
+        }
+    }
+
+    // Backup method to use AI for getting nutrition info for unknown products
+    suspend fun getProductInfoWithAI(
+        barcode: String,
+        productName: String?,
+        geminiService: GeminiService,
+        image: Bitmap?
+    ): ProductInfo {
+        return try {
+            val name = productName ?: "Unknown Product (Barcode: $barcode)"
+
+            // Use the existing GeminiService to estimate calories
+            if (image != null) {
+                val result = geminiService.doFoodRecognition(image, name)
+                val responseText = result.firstOrNull() ?: ""
+
+                // Extract calorie value using regex for more reliability
+                val calorieRegex = Regex("Calories:\\s*(\\d+)\\s*kcal", RegexOption.IGNORE_CASE)
+                val matchResult = calorieRegex.find(responseText)
+
+                val estimatedCalories = if (matchResult != null) {
+                    matchResult.groupValues[1].toIntOrNull() ?: 0
+                } else {
+                    responseText.filter { it.isDigit() }.toIntOrNull() ?: 0
+                }
+
+                ProductInfo(name, estimatedCalories, null, false, estimatedCalories, null, null)
+            } else {
+                // If no image, make a more generic request
+                val result = geminiService.estimateCaloriesForFood(name)
+                val calories = result.toIntOrNull() ?: 0
+                ProductInfo(name, calories, null, false, calories, null, null)
+            }
+        } catch (e: Exception) {
+            Log.e("FoodDatabaseService", "Error getting AI-based nutrition info", e)
+            ProductInfo(productName ?: "Unknown Product", 0, null, false, 0, null, null)
+        }
+    }
+}
+
+data class ProductInfo(
+    val productName: String,
+    val calories: Int,
+    val servingSize: String?,
+    val isPerServing: Boolean,
+    val perUnitCalories: Int,
+    val totalQuantity: String?,
+    val totalCalories: Int?
+)
+
+// Add this extension function to GeminiService
+suspend fun GeminiService.estimateCaloriesForFood(foodName: String): String {
+    // Implementation would depend on your existing GeminiService
+    // This is a placeholder, you would need to implement this in your GeminiService class
+    return "0"
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,6 +308,18 @@ fun CaptureFoodScreen(navController: NavController) {
     var autoIdentifyFood by remember { mutableStateOf(true) }
     var showImageSourceOptions by remember { mutableStateOf(false) }
 
+    // New state variables for barcode scanning
+    var isBarcodeScannerActive by remember { mutableStateOf(false) }
+    var scannedBarcode by remember { mutableStateOf<String?>(null) }
+    var productSource by remember { mutableStateOf("") }
+
+    // New state variables for package information
+    var servingSize by remember { mutableStateOf<String?>(null) }
+    var isPerServing by remember { mutableStateOf(false) }
+    var totalQuantity by remember { mutableStateOf<String?>(null) }
+    var totalCalories by remember { mutableStateOf<Int?>(null) }
+    var perUnitCalories by remember { mutableStateOf(0) }
+
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -74,6 +332,131 @@ fun CaptureFoodScreen(navController: NavController) {
 
     // Initialize ImageUtils for handling gallery images
     val imageUtils = remember { ImageUtils(context) }
+
+    // Function to process barcode result
+    fun processBarcodeResult(barcode: String, image: Bitmap?) {
+        isProcessing = true
+        scannedBarcode = barcode
+
+        coroutineScope.launch {
+            try {
+                // First try the main database
+                val productInfo = withContext(Dispatchers.IO) {
+                    FoodDatabaseService.getProductByBarcode(barcode)
+                }
+
+                if (productInfo != null) {
+                    // Product found in database
+                    foodName = productInfo.productName
+                    // Use total calories if available, otherwise use per unit calories
+                    caloricValue = if (productInfo.totalCalories != null) {
+                        productInfo.totalCalories.toString()
+                    } else {
+                        productInfo.calories.toString()
+                    }
+
+                    servingSize = productInfo.servingSize
+                    isPerServing = productInfo.isPerServing
+                    totalQuantity = productInfo.totalQuantity
+                    totalCalories = productInfo.totalCalories
+                    perUnitCalories = productInfo.perUnitCalories
+                    productSource = "Food Database"
+
+                    // Create descriptive text for calories
+                    val calorieDesc = if (totalCalories != null) {
+                        "${totalCalories} total calories" +
+                                (if (totalQuantity != null) " in $totalQuantity" else "") +
+                                (if (isPerServing) " (${perUnitCalories} per " +
+                                        (servingSize ?: "serving") + ")" else "")
+                    } else if (isPerServing) {
+                        "${perUnitCalories} calories per " +
+                                (servingSize ?: "serving")
+                    } else {
+                        "${perUnitCalories} calories per 100g/ml"
+                    }
+
+                    Log.d("CaptureFoodScreen", "Product info: $productInfo")
+                    Log.d("CaptureFoodScreen", "Caloric value being used: $caloricValue")
+
+                    Toast.makeText(
+                        context,
+                        "Product found: ${productInfo.productName} - $calorieDesc",
+                        Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    // Product not found - simply show not found message without AI attempt
+                    Log.i("CaptureFoodScreen", "Product not found in database")
+
+                    foodName = "Unknown Product (Barcode: $barcode)"
+                    caloricValue = "0"
+                    servingSize = null
+                    isPerServing = false
+                    totalQuantity = null
+                    totalCalories = null
+                    perUnitCalories = 0
+                    productSource = "Not in Database"
+
+                    Toast.makeText(
+                        context,
+                        "Product with barcode $barcode not found in database. Please enter details manually.",
+                        Toast.LENGTH_LONG
+                    ).show()
+
+                    errorMessage = "Product not found. Enter details manually."
+                }
+
+                // Set recognized food to trigger the results display
+                recognizedFood = Pair(foodName, caloricValue.toIntOrNull() ?: 0)
+                isProcessing = false
+            } catch (e: Exception) {
+                Log.e("CaptureFoodScreen", "Error processing barcode", e)
+                errorMessage = "Error processing barcode: ${e.message}"
+                isProcessing = false
+            }
+        }
+    }
+
+    // Function to scan barcode from image
+    fun scanBarcodeFromImage(bitmap: Bitmap) {
+        isProcessing = true
+        errorMessage = ""
+
+        try {
+            val image = InputImage.fromBitmap(bitmap, 0)
+            val scanner = BarcodeScanning.getClient()
+
+            scanner.process(image)
+                .addOnSuccessListener { barcodes ->
+                    if (barcodes.isNotEmpty()) {
+                        val barcode = barcodes[0]
+                        when (barcode.valueType) {
+                            Barcode.TYPE_PRODUCT, Barcode.TYPE_TEXT -> {
+                                barcode.rawValue?.let {
+                                    Log.i("CaptureFoodScreen", "Barcode scanned: $it")
+                                    processBarcodeResult(it, bitmap)
+                                }
+                            }
+                            else -> {
+                                errorMessage = "Unsupported barcode format"
+                                isProcessing = false
+                            }
+                        }
+                    } else {
+                        errorMessage = "No barcode found in image. Try taking a clearer photo."
+                        isProcessing = false
+                    }
+                }
+                .addOnFailureListener {
+                    Log.e("CaptureFoodScreen", "Barcode scanning failed", it)
+                    errorMessage = "Failed to scan barcode: ${it.message}"
+                    isProcessing = false
+                }
+        } catch (e: Exception) {
+            Log.e("CaptureFoodScreen", "Error setting up barcode scanner", e)
+            errorMessage = "Error setting up barcode scanner: ${e.message}"
+            isProcessing = false
+        }
+    }
 
     // Function to identify food from image with improved error handling
     fun identifyFoodFromImage(image: Bitmap?) {
@@ -124,6 +507,7 @@ fun CaptureFoodScreen(navController: NavController) {
 
                     recognizedFood = Pair(responseText, estimatedCaloricValue)
                     caloricValue = estimatedCaloricValue.toString()
+                    productSource = "AI Food Recognition"
                 } else {
                     errorMessage = "Could not identify food from image. Please enter food name manually."
                     Log.w("CaptureFoodScreen", "Food identification failed: $identifiedFoodName")
@@ -169,6 +553,7 @@ fun CaptureFoodScreen(navController: NavController) {
 
                 recognizedFood = Pair(responseText, estimatedCaloricValue)
                 caloricValue = estimatedCaloricValue.toString()
+                productSource = "AI Calorie Estimation"
                 isProcessing = false
             } catch (e: Exception) {
                 Log.e("CaptureFoodScreen", "Error recognizing food", e)
@@ -190,7 +575,9 @@ fun CaptureFoodScreen(navController: NavController) {
                 "caloricValue" to caloricValue,
                 "timestamp" to Date(),
                 "userId" to it.uid,
-                "dateString" to todayString
+                "dateString" to todayString,
+                "barcode" to scannedBarcode,
+                "source" to productSource
             )
             FirebaseFirestore.getInstance().collection("foodEntries")
                 .add(foodData)
@@ -218,10 +605,22 @@ fun CaptureFoodScreen(navController: NavController) {
             imageBitmap = bitmap
             errorMessage = "" // Clear any previous errors
 
-            // If we have an image and auto-identify is enabled
-            if (bitmap != null && autoIdentifyFood) {
-                // Automatically identify the food after taking the photo
-                identifyFoodFromImage(bitmap)
+            if (bitmap != null) {
+                if (isBarcodeScannerActive) {
+                    // Process as barcode image
+                    scanBarcodeFromImage(bitmap)
+                    isBarcodeScannerActive = false
+                } else {
+                    // Automatically identify the food after taking the photo
+                    // Only if we're not in barcode mode, reset the barcode data
+                    // to allow AI food identification
+                    scannedBarcode = null
+                    productSource = ""
+
+                    if (autoIdentifyFood) {
+                        identifyFoodFromImage(bitmap)
+                    }
+                }
             }
         }
 
@@ -235,9 +634,18 @@ fun CaptureFoodScreen(navController: NavController) {
                     imageBitmap = bitmap
                     errorMessage = "" // Clear any previous errors
 
-                    // If auto-identify is enabled
-                    if (autoIdentifyFood) {
-                        identifyFoodFromImage(bitmap)
+                    // Check if we're in barcode mode or regular mode
+                    if (isBarcodeScannerActive) {
+                        scanBarcodeFromImage(bitmap)
+                        isBarcodeScannerActive = false
+                    } else {
+                        // If not in barcode mode, reset barcode data to allow AI food identification
+                        scannedBarcode = null
+                        productSource = ""
+
+                        if (autoIdentifyFood) {
+                            identifyFoodFromImage(bitmap)
+                        }
                     }
                 } catch (e: Exception) {
                     errorMessage = "Error loading image: ${e.message}"
@@ -390,7 +798,53 @@ fun CaptureFoodScreen(navController: NavController) {
                             )
                         )
 
-                        // Food Name Text Field with edit button
+                        // Barcode scan button
+                        Button(
+                            onClick = {
+                                isBarcodeScannerActive = true
+                                showImageSourceOptions = true
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            shape = roundedShape,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.QrCode2,
+                                contentDescription = "Scan Barcode",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Scan Barcode")
+                        }
+
+                        // Display scanned barcode if available
+                        AnimatedVisibility(visible = scannedBarcode != null) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.QrCode,
+                                    contentDescription = null,
+                                    tint = Primary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Barcode: ${scannedBarcode ?: ""}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+
+                        // Food Name Text Field with edit button - modified to never show refresh button when product is found by barcode
                         OutlinedTextField(
                             value = foodName,
                             onValueChange = {
@@ -405,9 +859,11 @@ fun CaptureFoodScreen(navController: NavController) {
                                     tint = Primary
                                 )
                             },
-                            trailingIcon = if (imageBitmap != null) {
+                            trailingIcon = if (imageBitmap != null && scannedBarcode == null) {
                                 {
-                                    IconButton(onClick = { identifyFoodFromImage(imageBitmap) }) {
+                                    IconButton(
+                                        onClick = { identifyFoodFromImage(imageBitmap) }
+                                    ) {
                                         Icon(
                                             imageVector = Icons.Default.Refresh,
                                             contentDescription = "Re-identify",
@@ -426,36 +882,40 @@ fun CaptureFoodScreen(navController: NavController) {
                             singleLine = true
                         )
 
-                        // Recognize food button
-                        Button(
-                            onClick = { recognizeFood(imageBitmap, foodName) },
-                            enabled = !isProcessing && (foodName.isNotEmpty() || imageBitmap != null),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.background,
-                                contentColor = Primary,
-                                disabledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f),
-                                disabledContentColor = Primary.copy(alpha = 0.5f)
-                            ),
-                            border = BorderStroke(1.dp, if (isProcessing) Primary.copy(alpha = 0.5f) else Primary),
-                            shape = roundedShape,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                        ) {
-                            if (isProcessing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    color = Primary,
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Analyzing...")
-                            } else {
-                                Text("Calculate Calories")
+                        // Recognize food button (only show if not using barcode scanning)
+                        if (scannedBarcode == null) {
+                            Button(
+                                onClick = { recognizeFood(imageBitmap, foodName) },
+                                enabled = !isProcessing && (foodName.isNotEmpty() || imageBitmap != null),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                    contentColor = Primary,
+                                    disabledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f),
+                                    disabledContentColor = Primary.copy(alpha = 0.5f)
+                                ),
+                                border = BorderStroke(1.dp, if (isProcessing) Primary.copy(alpha = 0.5f) else Primary),
+                                shape = roundedShape,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                            ) {
+                                if (isProcessing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = Primary,
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Analyzing...")
+                                } else {
+                                    Text("Calculate Calories")
+                                }
                             }
                         }
                     }
                 }
+
+                // No product found card has been completely removed
 
                 // Display recognized food results
                 AnimatedVisibility(
@@ -488,8 +948,119 @@ fun CaptureFoodScreen(navController: NavController) {
                                 color = MaterialTheme.colorScheme.onSurface
                             )
 
+                            // Show serving and package information if available
+                            AnimatedVisibility(visible = productSource.contains("Database") && (servingSize != null || totalQuantity != null)) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    // Show serving size if available
+                                    if (servingSize != null && isPerServing) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.FoodBank,
+                                                contentDescription = null,
+                                                tint = Primary.copy(alpha = 0.8f),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                "Per serving: $perUnitCalories calories ($servingSize)",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                            )
+                                        }
+                                    }
+
+                                    // Show package quantity if available
+                                    if (totalQuantity != null) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.fillMaxWidth().padding(top = if(servingSize != null) 4.dp else 0.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Inventory,
+                                                contentDescription = null,
+                                                tint = Primary.copy(alpha = 0.8f),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                "Package: $totalQuantity" +
+                                                        (if (totalCalories != null) " ($totalCalories total calories)" else ""),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Show data source
+                            if (servingSize != null && isPerServing) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Restaurant,
+                                        contentDescription = null,
+                                        tint = Primary
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Serving size: $servingSize")
+                                }
+                            }
+
+                            if (productSource.isNotEmpty()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(
+                                        imageVector = when {
+                                            productSource == "Not in Database" -> Icons.Default.Error
+                                            productSource.contains("Database") -> Icons.Default.DataObject
+                                            else -> Icons.Default.Psychology
+                                        },
+                                        contentDescription = null,
+                                        tint = when {
+                                            productSource == "Not in Database" -> MaterialTheme.colorScheme.error
+                                            else -> Primary.copy(alpha = 0.8f)
+                                        },
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        "Source: $productSource",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    )
+                                }
+                            }
+
                             Text(
-                                "Based on ${if (imageBitmap != null) "the image and " else ""}typical ingredients of ${foodName.ifEmpty { "this food" }}",
+                                when {
+                                    scannedBarcode != null && productSource == "Not in Database" ->
+                                        "No product found with barcode $scannedBarcode"
+                                    scannedBarcode != null && productSource.contains("Database") -> {
+                                        if (totalCalories != null) {
+                                            "Total package: $totalCalories calories" +
+                                                    (if (totalQuantity != null) " in $totalQuantity" else "")
+                                        } else if (isPerServing) {
+                                            "Per serving: $perUnitCalories calories" +
+                                                    (if (servingSize != null) " ($servingSize)" else "")
+                                        } else {
+                                            "Per 100g/ml: $perUnitCalories calories"
+                                        }
+                                    }
+                                    scannedBarcode != null ->
+                                        "Estimated nutrition for scanned product"
+                                    imageBitmap != null ->
+                                        "Based on the image and ${if (foodName.isNotEmpty()) "typical ingredients of $foodName" else "AI analysis"}"
+                                    else ->
+                                        "Based on typical ingredients of ${foodName.ifEmpty { "this food" }}"
+                                },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                             )
@@ -524,7 +1095,8 @@ fun CaptureFoodScreen(navController: NavController) {
                             // Save food data button
                             Button(
                                 onClick = { confirmSave = true },
-                                enabled = foodName.isNotEmpty() && caloricValue.isNotEmpty() && !isProcessing,
+                                enabled = foodName.isNotEmpty() && foodName != "No Product Found" &&
+                                        caloricValue.isNotEmpty() && !isProcessing,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Primary,
                                     contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -582,70 +1154,87 @@ fun CaptureFoodScreen(navController: NavController) {
             // Image source selection dialog
             if (showImageSourceOptions) {
                 AlertDialog(
-                    onDismissRequest = { showImageSourceOptions = false },
-                    title = { Text("Add Food Image") },
-                    text = { Text("Choose an image source") },
+                    onDismissRequest = {
+                        showImageSourceOptions = false
+                        isBarcodeScannerActive = false
+                    },
+                    title = {
+                        Text(if (isBarcodeScannerActive) "Scan Barcode" else "Add Food Image")
+                    },
+                    text = {
+                        Text(if (isBarcodeScannerActive)
+                            "Take a photo of the barcode on the product packaging"
+                        else "Choose an image source"
+                        )
+                    },
                     confirmButton = {
-                        Row(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            Button(
-                                onClick = {
-                                    showImageSourceOptions = false
-                                    cameraLauncher.launch(null)
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Primary
-                                ),
-                                modifier = Modifier.weight(1f)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.CameraAlt,
-                                    contentDescription = "Camera",
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    "Camera",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    maxLines = 1,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
+                                Button(
+                                    onClick = {
+                                        showImageSourceOptions = false
+                                        cameraLauncher.launch(null)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Primary
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CameraAlt,
+                                        contentDescription = "Camera",
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        "Camera",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        maxLines = 1,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
 
-                            Spacer(modifier = Modifier.width(16.dp))
+                                Spacer(modifier = Modifier.width(16.dp))
 
-                            Button(
-                                onClick = {
-                                    showImageSourceOptions = false
-                                    galleryLauncher.launch("image/*")
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Primary
-                                ),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.PhotoLibrary,
-                                    contentDescription = "Gallery",
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    "Gallery",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    maxLines = 1,
-                                    textAlign = TextAlign.Center
-                                )
+                                Button(
+                                    onClick = {
+                                        showImageSourceOptions = false
+                                        galleryLauncher.launch("image/*")
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Primary
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PhotoLibrary,
+                                        contentDescription = "Gallery",
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        "Gallery",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        maxLines = 1,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
                             }
                         }
                     },
                     dismissButton = {
                         TextButton(
-                            onClick = { showImageSourceOptions = false }
+                            onClick = {
+                                showImageSourceOptions = false
+                                isBarcodeScannerActive = false
+                            }
                         ) {
                             Text("Cancel")
                         }
@@ -718,7 +1307,43 @@ fun CaptureFoodScreen(navController: NavController) {
                                     tint = Primary
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("$caloricValue calories")
+                                Text(
+                                    if (isPerServing) "$caloricValue calories per serving"
+                                    else "$caloricValue calories"
+                                )
+                            }
+
+                            if (scannedBarcode != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.QrCode,
+                                        contentDescription = null,
+                                        tint = Primary
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Barcode: $scannedBarcode")
+                                }
+                            }
+
+                            if (productSource.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = when {
+                                            productSource == "Not in Database" -> Icons.Default.Error
+                                            productSource.contains("Database") -> Icons.Default.DataObject
+                                            else -> Icons.Default.Psychology
+                                        },
+                                        contentDescription = null,
+                                        tint = when {
+                                            productSource == "Not in Database" -> MaterialTheme.colorScheme.error
+                                            else -> Primary
+                                        }
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Source: $productSource")
+                                }
                             }
                         }
                     },

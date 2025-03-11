@@ -83,6 +83,8 @@ dependencies {
 
     implementation("com.squareup.okhttp3:okhttp:4.11.0") // Ensure you have the latest version
 
+    implementation ("com.google.mlkit:barcode-scanning:17.2.0")
+
 
 
 
