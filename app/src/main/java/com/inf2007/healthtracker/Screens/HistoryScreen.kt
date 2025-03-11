@@ -1,6 +1,13 @@
 package com.inf2007.healthtracker.Screens
 
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,12 +18,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material.DismissDirection
 import androidx.compose.material.DismissValue
 import androidx.compose.material.ExperimentalMaterialApi
@@ -25,11 +33,14 @@ import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.rememberDismissState
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -46,8 +57,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
@@ -58,23 +69,39 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.inf2007.healthtracker.ui.theme.Secondary
+import com.inf2007.healthtracker.ui.theme.Primary
 import com.inf2007.healthtracker.utilities.BottomNavigationBar
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.Date
 import java.util.Calendar
 import androidx.compose.material.icons.filled.LocalDining
-import androidx.compose.material3.ButtonDefaults
-import com.inf2007.healthtracker.ui.theme.Primary
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.RestaurantMenu
+import androidx.compose.material.icons.filled.Coffee
+import androidx.compose.material.icons.filled.Fastfood
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
@@ -92,6 +119,9 @@ fun HistoryScreen(
     var pendingDeleteItem by remember { mutableStateOf<Any?>(null) }
     val currentUser = FirebaseAuth.getInstance().currentUser
 
+    // Expanded states for date sections
+    var expandedDates by remember { mutableStateOf(setOf<String>()) }
+
     // Date range picker states
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
@@ -106,7 +136,16 @@ fun HistoryScreen(
     val endDatePickerState = rememberDatePickerState(initialSelectedDateMillis = null, initialDisplayMode = DisplayMode.Picker)
 
     // Convert date picker states to actual dates
-    val startDate = startDatePickerState.selectedDateMillis?.let { Date(it) }
+    val startDate = startDatePickerState.selectedDateMillis?.let {
+        // Set start date to beginning of day (00:00:00)
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = it
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        Date(cal.timeInMillis)
+    }
     val endDate = endDatePickerState.selectedDateMillis?.let {
         // Set end date to end of day (23:59:59)
         val cal = Calendar.getInstance()
@@ -183,8 +222,6 @@ fun HistoryScreen(
         filteredFoodEntries = foodEntriesHistory
         filteredStepsHistory = stepsHistory
     }
-
-
 
     LaunchedEffect(Unit) {
         currentUser?.let {
@@ -283,7 +320,7 @@ fun HistoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("History") },
+                title = { Text("History", fontWeight = FontWeight.Bold) },
                 modifier = Modifier.padding(horizontal = 24.dp),
                 actions = {
                     IconButton(onClick = { isSearchActive = !isSearchActive }) {
@@ -434,7 +471,20 @@ fun HistoryScreen(
                     }
                 } else if (filteredFoodEntries.isEmpty() && filteredStepsHistory.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No history found for the selected date range.")
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Filled.FilterList,
+                                contentDescription = "No results",
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "No history found for the selected date range.",
+                                style = MaterialTheme.typography.bodyLarge,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
                 } else {
                     // Calculate the totals from the filtered lists
@@ -464,7 +514,16 @@ fun HistoryScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                                 ) {
-                                    Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.CalendarToday,
+                                            contentDescription = "Date Range",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
                                         Text(
                                             "Date Range: ${dateFormatter.format(startDate)} - ${dateFormatter.format(endDate)}",
                                             style = MaterialTheme.typography.bodyMedium
@@ -475,74 +534,142 @@ fun HistoryScreen(
                         }
 
                         item {
-                            Text("Food Entries History", style = MaterialTheme.typography.titleLarge)
+                            Text(
+                                "Food Entries History",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                            )
                         }
 
                         if (filteredFoodEntries.isEmpty()) {
                             item {
-                                Text("No food entries found.", style = MaterialTheme.typography.bodyLarge)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "No food entries found.",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                    )
+                                }
                             }
                         } else {
                             groupedFoodEntries.forEach { (date, entries) ->
-                                item {
-                                    Text("Date: $date", style = MaterialTheme.typography.bodyLarge)
-                                }
+                                val isExpanded = expandedDates.contains(date)
                                 val totalCaloriesForDate = entries.sumOf { it.caloricValue }
+
                                 item {
-                                    Text("Total Calories: $totalCaloriesForDate", style = MaterialTheme.typography.bodyMedium)
-                                }
-                                items(entries) { entry ->
-                                    val dismissState = rememberDismissState(
-                                        confirmStateChange = { dismissValue ->
-                                            if (dismissValue == DismissValue.DismissedToStart) {
-                                                pendingDeleteItem = entry
+                                    // Date header with toggle functionality
+                                    DateHeader(
+                                        date = date,
+                                        totalCalories = totalCaloriesForDate,
+                                        isExpanded = isExpanded,
+                                        onToggle = {
+                                            expandedDates = if (isExpanded) {
+                                                expandedDates - date
+                                            } else {
+                                                expandedDates + date
                                             }
-                                            false // Don't auto-dismiss
                                         }
                                     )
 
-                                    SwipeToDismiss(
-                                        state = dismissState,
-                                        directions = setOf(DismissDirection.EndToStart),
-                                        background = {
-                                            val color = if (dismissState.targetValue == DismissValue.Default)
-                                                MaterialTheme.colorScheme.surface
-                                            else
-                                                MaterialTheme.colorScheme.error
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .clip(RoundedCornerShape(16.dp))
-                                                    .background(color)
-                                                    .padding(8.dp),
-                                                contentAlignment = Alignment.CenterEnd
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Delete,
-                                                    contentDescription = "Delete",
-                                                    tint = MaterialTheme.colorScheme.onError
+                                    // Animated visibility for entries under this date
+                                    AnimatedVisibility(
+                                        visible = isExpanded,
+                                        enter = fadeIn(animationSpec = tween(200)) + expandVertically(),
+                                        exit = fadeOut(animationSpec = tween(200)) + shrinkVertically()
+                                    ) {
+                                        Column(
+                                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                                            modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 16.dp)
+                                        ) {
+                                            entries.forEach { entry ->
+                                                val dismissState = rememberDismissState(
+                                                    confirmStateChange = { dismissValue ->
+                                                        if (dismissValue == DismissValue.DismissedToStart) {
+                                                            pendingDeleteItem = entry
+                                                        }
+                                                        false // Don't auto-dismiss
+                                                    }
                                                 )
+
+                                                SwipeToDismiss(
+                                                    state = dismissState,
+                                                    directions = setOf(DismissDirection.EndToStart),
+                                                    background = {
+                                                        val color = if (dismissState.targetValue == DismissValue.Default)
+                                                            MaterialTheme.colorScheme.surface
+                                                        else
+                                                            MaterialTheme.colorScheme.error
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .fillMaxSize()
+                                                                .clip(RoundedCornerShape(16.dp))
+                                                                .background(color)
+                                                                .padding(8.dp),
+                                                            contentAlignment = Alignment.CenterEnd
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.Delete,
+                                                                contentDescription = "Delete",
+                                                                tint = MaterialTheme.colorScheme.onError,
+                                                                modifier = Modifier.padding(end = 16.dp)
+                                                            )
+                                                        }
+                                                    },
+                                                    dismissContent = {
+                                                        EnhancedFoodEntryCard(entry = entry)
+                                                    }
+                                                )
+                                                Spacer(modifier = Modifier.height(8.dp))
                                             }
-                                        },
-                                        dismissContent = {
-                                            FoodEntryHistoryCard(entry = entry, dateFormatter = dateFormatter)
                                         }
-                                    )
+                                    }
                                 }
-                                item {
-                                    Spacer(modifier = Modifier.height(1.dp))
+
+                                // When collapsed, show a summary line
+                                if (!isExpanded) {
+                                    item {
+                                        Text(
+                                            "${entries.size} food entries (tap to expand)",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
 
                         item {
                             Spacer(modifier = Modifier.height(24.dp))
-                            Text("Steps History", style = MaterialTheme.typography.titleLarge)
+                            Text(
+                                "Steps History",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
                         }
 
                         if (filteredStepsHistory.isEmpty()) {
                             item {
-                                Text("No steps data found.", style = MaterialTheme.typography.bodyLarge)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "No steps data found.",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                    )
+                                }
                             }
                         } else {
                             items(filteredStepsHistory) { entry ->
@@ -574,7 +701,8 @@ fun HistoryScreen(
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
                                                 contentDescription = "Delete",
-                                                tint = MaterialTheme.colorScheme.onError
+                                                tint = MaterialTheme.colorScheme.onError,
+                                                modifier = Modifier.padding(end = 16.dp)
                                             )
                                         }
                                     },
@@ -582,12 +710,11 @@ fun HistoryScreen(
                                         StepsHistoryCard(entry = entry, dateFormatter = dateFormatter)
                                     }
                                 )
+                                Spacer(modifier = Modifier.height(8.dp))
                             }
                         }
                     }
                 }
-
-                // Confirmation dialog for deletion remains unchanged...
             }
 
             // Confirmation dialog for deletion
@@ -634,31 +761,188 @@ fun HistoryScreen(
 }
 
 @Composable
-fun FoodEntryHistoryCard(entry: FoodEntry2, dateFormatter: SimpleDateFormat) {
-    val dateTimeFormatter = SimpleDateFormat("MMM d, yyyy hh:mm a", Locale.getDefault())
-    val dateString = entry.timestamp?.toDate()?.let { dateTimeFormatter.format(it) } ?: "No date"
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = MaterialTheme.shapes.small,
-        colors = CardDefaults.cardColors(containerColor = Secondary, contentColor = Color.White)
+fun DateHeader(
+    date: String,
+    totalCalories: Int,
+    isExpanded: Boolean,
+    onToggle: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = if (isExpanded) 0.dp else 8.dp),
+        onClick = onToggle,
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Date with icon
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.CalendarToday,
+                        contentDescription = "Date",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    date,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+            }
+
+            // Total calories for this date
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Filled.LocalDining,
-                    contentDescription = "Calories Icon",
-                    tint = MaterialTheme.colorScheme.onPrimary
+                    contentDescription = "Calories",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("${entry.foodName}", style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    "$totalCalories cal",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    )
+                )
+            }
+        }
+    }
+}
 
+@Composable
+fun EnhancedFoodEntryCard(entry: FoodEntry2) {
+    val dateTimeFormatter = SimpleDateFormat("hh:mm a", Locale.getDefault())
+    val timeString = entry.timestamp?.toDate()?.let { dateTimeFormatter.format(it) } ?: "--:--"
+
+    // Determine the meal type icon based on time or name (this is just an example)
+    val mealIcon = getMealIcon(entry)
+
+    // Determine color based on caloric value
+    val caloricColor = when {
+        entry.caloricValue > 800 -> Color(0xFFE57373) // High calories - reddish
+        entry.caloricValue > 500 -> Color(0xFFFFB74D) // Medium calories - orange
+        else -> Color(0xFF81C784) // Low calories - greenish
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(16.dp),
+                spotColor = caloricColor.copy(alpha = 0.1f)
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Meal icon circle
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                caloricColor.copy(alpha = 0.7f),
+                                caloricColor.copy(alpha = 0.2f)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = mealIcon,
+                    contentDescription = "Meal Type",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
             }
 
-            Text("Calories: ${entry.caloricValue}", style = MaterialTheme.typography.bodyMedium)
-            Text("Date: $dateString", style = MaterialTheme.typography.bodySmall)
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Food details
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = entry.foodName,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Time of entry
+                Text(
+                    text = timeString,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            }
+
+            // Calorie counter with background
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(caloricColor.copy(alpha = 0.1f))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append("${entry.caloricValue}")
+                        }
+                        append(" cal")
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = caloricColor
+                )
+            }
         }
+    }
+}
+
+// Helper function to determine meal icon based on entry
+fun getMealIcon(entry: FoodEntry2): ImageVector {
+    // This is just an example logic - you might want to enhance this
+    // based on actual meal type data if available
+    val hour = entry.timestamp?.toDate()?.let {
+        Calendar.getInstance().apply { time = it }.get(Calendar.HOUR_OF_DAY)
+    } ?: 12
+
+    return when {
+        hour in 5..10 -> Icons.Filled.Coffee  // Breakfast
+        hour in 11..14 -> Icons.Filled.Restaurant  // Lunch
+        hour in 15..21 -> Icons.Filled.Fastfood  // Dinner
+        else -> Icons.Filled.RestaurantMenu
     }
 }
 
@@ -666,24 +950,92 @@ fun FoodEntryHistoryCard(entry: FoodEntry2, dateFormatter: SimpleDateFormat) {
 fun StepsHistoryCard(entry: StepsEntry, dateFormatter: SimpleDateFormat) {
     val dateString = entry.timestamp?.toDate()?.let { dateFormatter.format(it) } ?: "No date"
 
+    // Determine color based on steps count
+    val stepsColor = when {
+        entry.steps > 10000 -> Color(0xFF43A047) // Exceeds daily goal - green
+        entry.steps > 7500 -> Color(0xFF7CB342) // Almost at goal - light green
+        entry.steps > 5000 -> Color(0xFFFBC02D) // Halfway - yellow
+        entry.steps > 2500 -> Color(0xFFFB8C00) // Some progress - orange
+        else -> Color(0xFFE53935) // Little progress - red
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = MaterialTheme.shapes.small,
-        colors = CardDefaults.cardColors(containerColor = Secondary, contentColor = Color.White)
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(16.dp),
+                spotColor = stepsColor.copy(alpha = 0.1f)
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Steps icon circle
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                stepsColor.copy(alpha = 0.7f),
+                                stepsColor.copy(alpha = 0.2f)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.DirectionsWalk,
-                    contentDescription = "Steps Icon",
-                    tint = MaterialTheme.colorScheme.onPrimary
+                    contentDescription = "Steps",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("${entry.steps}", style = MaterialTheme.typography.titleMedium)
             }
 
-            Text("Date: $dateString", style = MaterialTheme.typography.bodySmall)
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Date and steps info
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = dateString,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+
+                Text(
+                    text = "${entry.steps} steps",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = stepsColor
+                )
+            }
+
+            // Steps value in a badge (replaces the progress indicator)
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(stepsColor.copy(alpha = 0.1f))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "${entry.steps}",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = stepsColor
+                )
+            }
         }
     }
 }
@@ -692,41 +1044,110 @@ fun StepsHistoryCard(entry: StepsEntry, dateFormatter: SimpleDateFormat) {
 fun TotalCard(totalCalories: Int, totalSteps: Int) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = MaterialTheme.shapes.small,
-        colors = CardDefaults.cardColors(containerColor = Primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(20.dp),
         ) {
+            Text(
+                "Summary",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Row for Total Calories
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Filled.LocalDining,
-                    contentDescription = "Calories Icon",
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Total Calories: $totalCalories",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Icon in circle
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.LocalDining,
+                        contentDescription = "Calories Icon",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column {
+                    Text(
+                        text = "Total Calories",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Medium
+                        )
+                    )
+
+                    Text(
+                        text = "$totalCalories calories",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+
+            Divider(
+                modifier = Modifier.padding(vertical = 8.dp),
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f)
+            )
+
             // Row for Total Steps
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.DirectionsWalk,
-                    contentDescription = "Steps Icon",
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Total Steps: $totalSteps",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Icon in circle
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.DirectionsWalk,
+                        contentDescription = "Steps Icon",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column {
+                    Text(
+                        text = "Total Steps",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Medium
+                        )
+                    )
+
+                    Text(
+                        text = "$totalSteps steps",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
             }
         }
     }

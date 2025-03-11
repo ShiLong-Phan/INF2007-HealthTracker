@@ -1,63 +1,71 @@
 package com.inf2007.healthtracker.Screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
 import com.inf2007.healthtracker.utilities.*
 import com.inf2007.healthtracker.BuildConfig
+import com.inf2007.healthtracker.R
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextDecoration
-import com.inf2007.healthtracker.ui.theme.Primary
-import com.google.android.gms.location.LocationServices
 import android.location.Location
-import android.Manifest
 import android.util.Log
-import androidx.compose.ui.res.painterResource
-import com.google.android.gms.location.LocationRequest
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.draw.rotate
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import com.inf2007.healthtracker.R
-import com.inf2007.healthtracker.utilities.calculateDistance
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun RequestLocationPermission(
     onPermissionGranted: @Composable () -> Unit
 ) {
-    val locationPermissionState = rememberPermissionState(permission = Manifest.permission.ACCESS_FINE_LOCATION)
+    val locationPermissionState = rememberPermissionState(permission = android.Manifest.permission.ACCESS_FINE_LOCATION)
 
     when {
         locationPermissionState.status.isGranted -> {
@@ -68,14 +76,31 @@ fun RequestLocationPermission(
         locationPermissionState.status.shouldShowRationale -> {
             // User denied once, but not permanently ("Don't ask again" not checked)
             Column(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text("Location permission is needed to show distances. Please grant permission.")
-                Spacer(Modifier.height(8.dp))
-                Button(onClick = { locationPermissionState.launchPermissionRequest() }) {
-                    Text("Allow")
+                Icon(
+                    imageVector = Icons.Filled.LocationOn,
+                    contentDescription = "Location Permission",
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "Location permission is needed to show restaurant distances",
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = { locationPermissionState.launchPermissionRequest() },
+                    modifier = Modifier.fillMaxWidth(0.7f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Allow Access")
                 }
             }
         }
@@ -83,16 +108,532 @@ fun RequestLocationPermission(
         else -> {
             // Permission not yet requested OR permanently denied
             Column(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text("Grant location permission to see distance.")
-                Spacer(Modifier.height(8.dp))
-                Button(onClick = { locationPermissionState.launchPermissionRequest() }) {
+                Icon(
+                    imageVector = Icons.Filled.LocationOff,
+                    contentDescription = "Location Permission Needed",
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "We need your location to show nearby restaurants with accurate distances",
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = { locationPermissionState.launchPermissionRequest() },
+                    modifier = Modifier.fillMaxWidth(0.7f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
                     Text("Grant Permission")
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun EmptyRestaurantsMessage() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Filled.NoMeals,
+                contentDescription = "No Restaurants",
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "No restaurant recommendations available",
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+fun EnhancedRestaurantItem(business: Business, userLocation: Location?) {
+    val context = LocalContext.current
+    var expanded by remember { mutableStateOf(false) } // Track expanded state
+
+    // Calculate distance if both user location and restaurant coordinates are present
+    val distanceKm = remember(userLocation, business.coordinates) {
+        userLocation?.let { loc ->
+            val lat = business.coordinates?.latitude
+            val lng = business.coordinates?.longitude
+            if (lat != null && lng != null) {
+                calculateDistance(loc, lat, lng)
+            } else null
+        }
+    }
+
+    val ratingColor = when {
+        business.rating >= 4.5 -> Color(0xFF4CAF50) // Excellent - Green
+        business.rating >= 4.0 -> Color(0xFF8BC34A) // Very Good - Light Green
+        business.rating >= 3.5 -> Color(0xFFFFEB3B) // Good - Yellow
+        business.rating >= 3.0 -> Color(0xFFFFC107) // Average - Amber
+        business.rating > 0 -> Color(0xFFFF9800) // Below Average - Orange
+        else -> Color.Gray // No Rating
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(16.dp)
+            )
+            .clickable { expanded = !expanded },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Restaurant header with image and basic info
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Restaurant image
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.size(80.dp)
+                ) {
+                    AsyncImage(
+                        model = if (business.image_url.isEmpty()) null else business.image_url,
+                        placeholder = painterResource(id = R.drawable.default_restaurant),
+                        error = painterResource(id = R.drawable.default_restaurant),
+                        fallback = painterResource(id = R.drawable.default_restaurant),
+                        contentDescription = business.name,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // Restaurant details
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = business.name,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Distance with icon
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.LocationOn,
+                            contentDescription = "Distance",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        val distanceText = if (distanceKm != null) {
+                            val formattedDistance = String.format(Locale.getDefault(), "%.1f", distanceKm)
+                            "$formattedDistance km away"
+                        } else {
+                            "Distance unavailable"
+                        }
+                        Text(
+                            text = distanceText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Rating with colored badge
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (business.rating > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(ratingColor)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = business.rating.toString(),
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+
+                            // Price indicator
+                            if (!business.price.isNullOrBlank()) {
+                                Text(
+                                    text = business.price,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = "No rating available",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+                }
+
+                // Expand/collapse icon
+                IconButton(
+                    onClick = { expanded = !expanded },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        contentDescription = if (expanded) "Show less" else "Show more"
+                    )
+                }
+            }
+
+            // Expanded content
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                ) {
+                    Divider(
+                        modifier = Modifier.padding(bottom = 16.dp),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                    )
+
+                    // Address
+                    Row(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Place,
+                            contentDescription = "Address",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = business.location.address1 ?: "Address not available",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    // Phone
+                    if (!business.phone.isNullOrBlank()) {
+                        Row(
+                            modifier = Modifier
+                                .padding(vertical = 4.dp)
+                                .clickable {
+                                    val intent = Intent(Intent.ACTION_DIAL).apply {
+                                        data = Uri.parse("tel:${business.phone}")
+                                    }
+                                    context.startActivity(intent)
+                                },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Phone,
+                                contentDescription = "Phone",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = business.phone,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Open in Maps button
+                    Button(
+                        onClick = {
+                            val gmmIntentUri = Uri.parse("geo:0,0?q=${Uri.encode(business.name)}")
+                            val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                            mapIntent.setPackage("com.google.android.apps.maps")
+                            context.startActivity(mapIntent)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(vertical = 12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Map,
+                            contentDescription = "Open in Maps"
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Open in Google Maps")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun UserProfileSummaryCard(
+    calorieIntake: Int,
+    age: Int,
+    weight: Int,
+    height: Int,
+    gender: String,
+    activityLevel: String,
+    dietaryPreference: String
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(16.dp)
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = "Profile",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    "Your Profile",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Calorie goal highlight
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                    .padding(12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.LocalDining,
+                            contentDescription = "Calorie Goal",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Column {
+                        Text(
+                            "Daily Calorie Goal",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            "$calorieIntake calories",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Profile details in two columns
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Left column
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ProfileDetail(
+                        icon = Icons.Filled.Cake,
+                        label = "Age",
+                        value = "$age years"
+                    )
+
+                    ProfileDetail(
+                        icon = Icons.Filled.Scale,
+                        label = "Weight",
+                        value = "$weight kg"
+                    )
+
+                    ProfileDetail(
+                        icon = Icons.Filled.Height,
+                        label = "Height",
+                        value = "$height cm"
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // Right column
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ProfileDetail(
+                        icon = Icons.Filled.Face,
+                        label = "Gender",
+                        value = gender
+                    )
+
+                    ProfileDetail(
+                        icon = Icons.Filled.DirectionsRun,
+                        label = "Activity",
+                        value = activityLevel
+                    )
+
+                    ProfileDetail(
+                        icon = Icons.Filled.SetMeal,
+                        label = "Diet",
+                        value = dietaryPreference
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfileDetail(
+    icon: ImageVector,
+    label: String,
+    value: String
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Column {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.SemiBold
+                )
+            )
+        }
+    }
+}
+
+@Composable
+fun SaveButton(
+    onClick: () -> Unit,
+    isLoading: Boolean = false
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(60.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
+        enabled = !isLoading
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = MaterialTheme.colorScheme.onPrimary,
+                strokeWidth = 2.dp
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                "Saving...",
+                style = MaterialTheme.typography.titleMedium
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Filled.Save,
+                contentDescription = "Save Meal Plan"
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                "Save Meal Plan",
+                style = MaterialTheme.typography.titleMedium
+            )
         }
     }
 }
@@ -139,8 +680,6 @@ fun StartLocationUpdates(
     }
 }
 
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MealRecommendationScreen(
@@ -159,18 +698,19 @@ fun MealRecommendationScreen(
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
     var showSuccessMessage by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val firestore = FirebaseFirestore.getInstance()
+    val listState = rememberLazyListState()
 
     val context = LocalContext.current
     val fusedLocationClient = remember {
         LocationServices.getFusedLocationProviderClient(context)
     }
 
-    // Store user’s location
+    // Store user's location
     var userLocation by remember { mutableStateOf<Location?>(null) }
-
 
     // ✅ Use Gemini AI SDK
     val geminiService = remember { GeminiService(BuildConfig.geminiApiKey) }
@@ -343,20 +883,20 @@ fun MealRecommendationScreen(
         }
     )
 
-//    LaunchedEffect(showSuccessMessage) {
-//        if (showSuccessMessage) {
-//            delay(500) // Wait for 0.5 seconds
-//            navController.navigate("main_screen") {
-//                popUpTo("main_screen") { inclusive = true }
-//            }
-//        }
-//    }
-
     Scaffold(
         topBar = {
             Column {
-                TopAppBar(title = { Text("AI Meal Plan") },
-                    modifier = Modifier.padding(horizontal = 24.dp),
+                TopAppBar(
+                    title = {
+                        Text(
+                            "AI Meal Plan",
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface
+                    ),
                     actions = {
                         IconButton(onClick = { navController.navigate("meal_plan_history_screen") }) {
                             Icon(
@@ -373,97 +913,188 @@ fun MealRecommendationScreen(
                                 contentDescription = "Refresh"
                             )
                         }
-                    })
+                    }
+                )
                 SnackbarHost(hostState = snackbarHostState)
             }
         },
-        bottomBar = { BottomNavigationBar(navController) }
+        bottomBar = { BottomNavigationBar(navController) },
+        containerColor = MaterialTheme.colorScheme.surface
     ) { paddingValues ->
         if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(60.dp),
+                        strokeWidth = 5.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Generating your personalized meal plan...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         } else if (errorMessage.isNotEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp, vertical = 16.dp)
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
-                // Meal Plan Section
-                item {
-                    ExpandableCard(title = "Meal Plan") {
-                        Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                            aiMealPlan.forEach { meal ->
-                                Text("- $meal", style = MaterialTheme.typography.bodyMedium)
-                            }
-                        }
-                    }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Error,
+                        contentDescription = "Error",
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
-                }
-
-                // Nearby Restaurants Section
-                item {
-                    ExpandableCard(title = "Nearby Restaurants") {
-                        Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                            restaurantRecommendations.filter { it.name.trim() != "-" }.forEach { business ->
-                                RestaurantItem(business, userLocation)
-                            }
-                        }
-                    }
+                    Text(
+                        text = errorMessage,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center
+                    )
                     Spacer(modifier = Modifier.height(24.dp))
-                }
-
-                item {
                     Button(
                         onClick = {
-                            val user = FirebaseAuth.getInstance().currentUser
-                            user?.let {
-                                val mealHistoryData = hashMapOf(
-                                    "uid" to it.uid,
-                                    "date" to Date(),
-                                    "meals" to aiMealPlan,
-                                    "restaurants" to restaurantRecommendations.map { business ->
-                                        mapOf(
-                                            "name" to business.name,
-                                            "imageUrl" to business.image_url,
-                                            "address" to business.location.address1,
-                                            "rating" to business.rating,
-                                            "phone" to business.phone,
-                                            "price" to business.price,
-                                            "coordinates" to business.coordinates?.let { coords ->
-                                                mapOf(
-                                                    "latitude" to coords.latitude,
-                                                    "longitude" to coords.longitude
-                                                )
+                            isLoading = true
+                            errorMessage = ""
+                            fetchMealAndRestaurants()
+                        },
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Try Again"
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Try Again")
+                    }
+                }
+            }
+        } else {
+            Box {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    // User Profile Summary
+                    item {
+                        UserProfileSummaryCard(
+                            calorieIntake = calorieIntake,
+                            age = age,
+                            weight = weight,
+                            height = height,
+                            gender = gender,
+                            activityLevel = activityLevel,
+                            dietaryPreference = dietaryPreference
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    // Meal Plan Section - UPDATED
+                    item {
+                        PersonalizedMealPlanCard(
+                            aiMealPlan = aiMealPlan
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    // Nearby Restaurants Section
+                    item {
+                        RestaurantsCard(
+                            restaurants = restaurantRecommendations,
+                            userLocation = userLocation
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    item {
+                        SaveButton(
+                            onClick = {
+                                isSaving = true
+                                val user = FirebaseAuth.getInstance().currentUser
+                                user?.let {
+                                    val mealHistoryData = hashMapOf(
+                                        "uid" to it.uid,
+                                        "date" to Date(),
+                                        "meals" to aiMealPlan,
+                                        "restaurants" to restaurantRecommendations.map { business ->
+                                            mapOf(
+                                                "name" to business.name,
+                                                "imageUrl" to business.image_url,
+                                                "address" to business.location.address1,
+                                                "rating" to business.rating,
+                                                "phone" to business.phone,
+                                                "price" to business.price,
+                                                "coordinates" to business.coordinates?.let { coords ->
+                                                    mapOf(
+                                                        "latitude" to coords.latitude,
+                                                        "longitude" to coords.longitude
+                                                    )
+                                                }
+                                            )
+                                        },
+                                        "calorieGoal" to calorieIntake
+                                    )
+                                    firestore.collection("mealHistory")
+                                        .add(mealHistoryData)
+                                        .addOnSuccessListener {
+                                            showSuccessMessage = true
+                                            isSaving = false
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Meal history saved successfully!")
                                             }
-                                        )
-                                    },
-                                    "calorieGoal" to calorieIntake
-                                )
-                                firestore.collection("mealHistory")
-                                    .add(mealHistoryData)
-                                    .addOnSuccessListener {
-                                        showSuccessMessage = true
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("Meal history saved successfully!")
                                         }
-                                    }
-                                    .addOnFailureListener { e ->
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("Failed to save meal history: ${e.message}")
+                                        .addOnFailureListener { e ->
+                                            isSaving = false
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Failed to save meal history: ${e.message}")
+                                            }
                                         }
-                                    }
+                                }
+                            },
+                            isLoading = isSaving
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+
+                // Show scroll to top button when scrolled down
+                AnimatedVisibility(
+                    visible = listState.canScrollBackward,
+                    enter = fadeIn() + scaleIn(),
+                    exit = fadeOut() + scaleOut()
+                ) {
+                    FloatingActionButton(
+                        onClick = {
+                            coroutineScope.launch {
+                                listState.animateScrollToItem(0)
                             }
                         },
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = MaterialTheme.shapes.small,
-                        colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp),
+                        containerColor = MaterialTheme.colorScheme.primary
                     ) {
-                        Text("Save Meal History")
+                        Icon(
+                            imageVector = Icons.Filled.KeyboardArrowUp,
+                            contentDescription = "Scroll to top"
+                        )
                     }
                 }
             }
@@ -472,141 +1103,283 @@ fun MealRecommendationScreen(
 }
 
 @Composable
-fun ExpandableCard(
-    title: String,
-    content: @Composable () -> Unit
+fun PersonalizedMealPlanCard(
+    aiMealPlan: List<String>
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(true) }
+    val rotationState by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "rotation"
+    )
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp)
-            .clickable { expanded = !expanded },
-        elevation = CardDefaults.cardElevation(4.dp)
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(16.dp)
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
-        Column (
-            modifier = Modifier.padding(16.dp) // Add padding inside the card
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
+            // Header with title and expand/collapse button
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .clickable { expanded = !expanded }
+                    .padding(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f)
+                    "Meal Plan",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 )
-                Icon(
-                    imageVector = if (expanded) Icons.Default.ArrowDropDown else Icons.Default.ArrowDropDown,
-                    contentDescription = if (expanded) "Collapse" else "Expand"
-                )
+
+                IconButton(
+                    onClick = { expanded = !expanded },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ExpandMore,
+                        contentDescription = if (expanded) "Collapse" else "Expand",
+                        modifier = Modifier.rotate(rotationState)
+                    )
+                }
             }
-            if (expanded) {
-                content()
+
+            // Information note
+            Text(
+                "AI-generated meal plan based on your preferences",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontStyle = FontStyle.Italic,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            // Meal content - collapsible
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column {
+                    if (aiMealPlan.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "No meal plan generated yet. Try refreshing.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    } else {
+                        aiMealPlan.forEachIndexed { index, meal ->
+                            if (index > 0) {
+                                Divider(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 12.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                )
+                            }
+
+                            MealContentDisplay(meal = meal)
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun RestaurantItem(business: Business, userLocation: Location?) {
-    val context = LocalContext.current
-    var expanded by remember { mutableStateOf(false) } // Track expanded state
+fun MealContentDisplay(meal: String) {
+    val paragraphs = meal.split("\n\n")
 
-    // Calculate distance if both user location and restaurant coordinates are present
-    val distanceKm = remember(userLocation, business.coordinates) {
-        userLocation?.let { loc ->
-            val lat = business.coordinates?.latitude
-            val lng = business.coordinates?.longitude
-            if (lat != null && lng != null) {
-                calculateDistance(loc, lat, lng)
-            } else null
-        }
-    }
-    println("DEBUG: Business=${business.name}, userLoc=$userLocation, coords=${business.coordinates}, distance=$distanceKm")
-
-    val expandedContent = @Composable {
-        Column(modifier = Modifier.padding(8.dp)) {
-            Text(
-                text = "Address: ${business.location.address1 ?: "Not Available"}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(text = "Phone: ${business.phone?.takeIf { it.isNotBlank() } ?: "Not Available"}",
-                style = MaterialTheme.typography.bodyMedium)
-            Text(
-                text = "Rating: ${if (business.rating == 0.0) "Not Available" else "${business.rating} / 5"}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(text = "Price: ${business.price?.takeIf { it.isNotBlank() } ?: "Not Available"}",
-                style = MaterialTheme.typography.bodyMedium)
-            Text(
-                text = "Click Here to Open in Google Maps",
-                style = MaterialTheme.typography.bodyMedium.copy(color = Color.Blue),
-                textDecoration = TextDecoration.Underline,
-                modifier = Modifier.clickable {
-                    val gmmIntentUri = Uri.parse("geo:0,0?q=${Uri.encode(business.name)}")
-                    val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
-                    mapIntent.setPackage("com.google.android.apps.maps")
-                    context.startActivity(mapIntent)
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Process the meal text considering various formats
+        if (meal.contains("\n")) {
+            // Process multiline content
+            val lines = meal.split("\n")
+            lines.forEach { line ->
+                if (line.trim().startsWith("-") || line.trim().startsWith("•") || line.matches(Regex("^\\d+\\..*"))) {
+                    // This is a bullet or numbered list item
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        // Extract the bullet or number and use it as the prefix
+                        val bulletMatch = Regex("^(•|-|\\d+\\.)\\s*(.*)$").find(line.trim())
+                        if (bulletMatch != null) {
+                            val (bullet, content) = bulletMatch.destructured
+                            Text(
+                                text = bullet + " ",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = content,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        } else {
+                            Text(
+                                text = line.trim(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                } else if (line.length < 50 && (line.endsWith(":") || line.uppercase() == line)) {
+                    // This looks like a heading or section title
+                    Text(
+                        text = line.trim(),
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                    )
+                } else if (line.trim().isNotEmpty()) {
+                    // Regular text line
+                    Text(
+                        text = line.trim(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    )
                 }
+            }
+        } else {
+            // Simple single paragraph
+            Text(
+                text = meal,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-            .clickable { expanded = !expanded }, // Toggle expanded state when clicked
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(8.dp),
-            horizontalAlignment = Alignment.Start
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AsyncImage(
-                    model = if (business.image_url.isEmpty()) null else business.image_url,
-                    placeholder = painterResource(id = R.drawable.default_restaurant),
-                    error = painterResource(id = R.drawable.default_restaurant),
-                    fallback = painterResource(id = R.drawable.default_restaurant),
-                    contentDescription = business.name,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .padding(4.dp),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                // Display business name and distance
-                val distanceText = if (distanceKm != null) {
-                    val formattedDistance = String.format(Locale.getDefault(), "%.1f", distanceKm)
-                    " ($formattedDistance km)"
-                } else {
-                    ""  // Show "N/A" if distance is null
-                }
-
-                Text(
-                    text = business.name + distanceText,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f)
-                )
-                Icon(
-                    imageVector = if (expanded) Icons.Default.ArrowDropDown else Icons.Default.ArrowDropDown,
-                    contentDescription = if (expanded) "Collapse" else "Expand"
-                )
-            }
-
-            // Show more details if expanded
-            if (expanded) {
-                expandedContent()
-            }
         }
     }
 }
 
+@Composable
+fun RestaurantsCard(
+    restaurants: List<Business>,
+    userLocation: Location?
+) {
+    var expanded by rememberSaveable { mutableStateOf(true) }
+    val rotationState by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "rotation"
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(16.dp)
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            // Header with expand/collapse button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                    .padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Restaurant,
+                            contentDescription = "Restaurants",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Text(
+                        text = "Nearby Restaurants",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
+
+                IconButton(
+                    onClick = { expanded = !expanded },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ExpandMore,
+                        contentDescription = if (expanded) "Collapse" else "Expand",
+                        modifier = Modifier.rotate(rotationState)
+                    )
+                }
+            }
+
+            // Restaurant list content
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                ) {
+                    val validRestaurants = restaurants.filter { it.name.trim() != "-" }
+
+                    if (validRestaurants.isEmpty()) {
+                        EmptyRestaurantsMessage()
+                    } else {
+                        validRestaurants.forEach { business ->
+                            EnhancedRestaurantItem(business, userLocation)
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
