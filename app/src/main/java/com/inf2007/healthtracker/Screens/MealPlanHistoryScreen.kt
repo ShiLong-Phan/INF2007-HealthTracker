@@ -376,44 +376,6 @@ fun MealPlanHistoryScreen(
                     }
                 }
             } else {
-                // Summary card for the top
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 8.dp)
-                ) {
-                    SummaryCard(filteredMealHistory)
-                }
-
-                // Date range info when filter is active
-                if (isDateRangeSearch && startDate != null && endDate != null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 8.dp)
-                    ) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Filled.CalendarToday,
-                                    contentDescription = "Date Range",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    "Date Range: ${dateFormatter.format(startDate)} - ${dateFormatter.format(endDate)}",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        }
-                    }
-                }
 
                 LazyColumn(
                     modifier = Modifier
@@ -421,6 +383,45 @@ fun MealPlanHistoryScreen(
                         .padding(horizontal = 24.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+
+                    // Add the SummaryCard as the first item in the LazyColumn
+                    item {
+                        // Add some top padding for better spacing
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // The Summary Card
+                        SummaryCard(filteredMealHistory)
+
+                        // Date range info when filter is active - moved inside LazyColumn after SummaryCard
+                        if (isDateRangeSearch && startDate != null && endDate != null) {
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Filled.CalendarToday,
+                                        contentDescription = "Date Range",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        "Date Range: ${dateFormatter.format(startDate)} - ${dateFormatter.format(endDate)}",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
+                        }
+
+                        // Spacer between summary card and title
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
                     item {
                         Text(
                             "Your Meal Plans",
