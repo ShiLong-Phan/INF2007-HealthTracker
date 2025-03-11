@@ -3,6 +3,7 @@ package com.inf2007.healthtracker.Screens
 import android.graphics.Bitmap
 import android.widget.Toast
 import android.util.Log
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -42,6 +43,7 @@ import com.inf2007.healthtracker.ui.theme.Primary
 import com.inf2007.healthtracker.ui.theme.Unfocused
 import com.inf2007.healthtracker.utilities.BottomNavigationBar
 import com.inf2007.healthtracker.utilities.GeminiService
+import com.inf2007.healthtracker.utilities.ImageUtils
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -58,6 +60,7 @@ fun CaptureFoodScreen(navController: NavController) {
     var showSuccessMessage by remember { mutableStateOf(false) }
     var confirmSave by remember { mutableStateOf(false) }
     var autoIdentifyFood by remember { mutableStateOf(true) }
+    var showImageSourceOptions by remember { mutableStateOf(false) }
 
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
@@ -69,10 +72,13 @@ fun CaptureFoodScreen(navController: NavController) {
     // Initialize GeminiService
     val geminiService = remember { GeminiService(BuildConfig.geminiApiKey) }
 
+    // Initialize ImageUtils for handling gallery images
+    val imageUtils = remember { ImageUtils(context) }
+
     // Function to identify food from image
     fun identifyFoodFromImage(image: Bitmap?) {
         if (image == null) {
-            errorMessage = "Please take a photo to identify food"
+            errorMessage = "Please provide an image to identify food"
             return
         }
 
@@ -121,7 +127,7 @@ fun CaptureFoodScreen(navController: NavController) {
     // Function to handle food recognition
     fun recognizeFood(image: Bitmap?, foodName: String) {
         if (image == null && foodName.isBlank()) {
-            errorMessage = "Please enter food name or take a photo"
+            errorMessage = "Please enter food name or provide an image"
             return
         }
 
@@ -194,6 +200,27 @@ fun CaptureFoodScreen(navController: NavController) {
             }
         }
 
+    // Gallery launcher
+    val galleryLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            uri?.let {
+                try {
+                    // Convert URI to Bitmap
+                    val bitmap = imageUtils.uriToBitmap(uri)
+                    imageBitmap = bitmap
+                    errorMessage = "" // Clear any previous errors
+
+                    // If auto-identify is enabled
+                    if (autoIdentifyFood) {
+                        identifyFoodFromImage(bitmap)
+                    }
+                } catch (e: Exception) {
+                    errorMessage = "Error loading image: ${e.message}"
+                    Log.e("CaptureFoodScreen", "Error loading image from gallery", e)
+                }
+            }
+        }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -235,7 +262,7 @@ fun CaptureFoodScreen(navController: NavController) {
                 verticalArrangement = Arrangement.spacedBy(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Card for image capture
+                // Card for image capture/upload
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -252,7 +279,7 @@ fun CaptureFoodScreen(navController: NavController) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(220.dp)
-                            .clickable { cameraLauncher.launch(null) },
+                            .clickable { showImageSourceOptions = true },
                         contentAlignment = Alignment.Center
                     ) {
                         imageBitmap?.let {
@@ -262,6 +289,25 @@ fun CaptureFoodScreen(navController: NavController) {
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
+
+                            // Add an overlay button to change the image
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.BottomEnd
+                            ) {
+                                FloatingActionButton(
+                                    onClick = { showImageSourceOptions = true },
+                                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                                    contentColor = Primary
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Change Image"
+                                    )
+                                }
+                            }
                         } ?: Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
@@ -274,15 +320,15 @@ fun CaptureFoodScreen(navController: NavController) {
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.CameraAlt,
-                                    contentDescription = "Camera",
+                                    imageVector = Icons.Default.AddAPhoto,
+                                    contentDescription = "Add Photo",
                                     tint = Primary,
                                     modifier = Modifier.size(32.dp)
                                 )
                             }
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                "Tap to take a photo",
+                                "Tap to add a photo",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -506,6 +552,80 @@ fun CaptureFoodScreen(navController: NavController) {
                         }
                     }
                 }
+            }
+
+            // Image source selection dialog
+            if (showImageSourceOptions) {
+                AlertDialog(
+                    onDismissRequest = { showImageSourceOptions = false },
+                    title = { Text("Add Food Image") },
+                    text = { Text("Choose an image source") },
+                    confirmButton = {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            Button(
+                                onClick = {
+                                    showImageSourceOptions = false
+                                    cameraLauncher.launch(null)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Primary
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CameraAlt,
+                                    contentDescription = "Camera",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "Camera",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 1,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            Button(
+                                onClick = {
+                                    showImageSourceOptions = false
+                                    galleryLauncher.launch("image/*")
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Primary
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PhotoLibrary,
+                                    contentDescription = "Gallery",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "Gallery",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 1,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showImageSourceOptions = false }
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                )
             }
 
             // Success message overlay
