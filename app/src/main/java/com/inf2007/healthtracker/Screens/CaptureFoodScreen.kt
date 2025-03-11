@@ -882,7 +882,7 @@ fun CaptureFoodScreen(navController: NavController) {
                             }
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                "Tap to add a photo & Upload to AI",
+                                "Add photo for AI analysis",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
