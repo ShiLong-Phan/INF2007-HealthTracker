@@ -57,6 +57,11 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 
 // Food Database API Interface
 interface FoodDatabaseApi {
@@ -654,6 +659,121 @@ fun CaptureFoodScreen(navController: NavController) {
             }
         }
 
+    val BarcodeIcon = ImageVector.Builder(
+        name = "Barcode",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).apply {
+        // Barcode outer frame
+        path(
+            fill = SolidColor(Color.Transparent),
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = 1f,
+            strokeLineCap = StrokeCap.Butt,
+            strokeLineJoin = StrokeJoin.Miter,
+            strokeLineMiter = 1f
+        ) {
+            // Outer rectangular frame
+            moveTo(2f, 4f)
+            lineTo(22f, 4f)
+            lineTo(22f, 20f)
+            lineTo(2f, 20f)
+            close()
+        }
+
+        // First line
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(3f, 6f)
+            lineTo(4f, 6f)
+            lineTo(4f, 18f)
+            lineTo(3f, 18f)
+            close()
+        }
+
+        // Second line
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(5f, 6f)
+            lineTo(5.5f, 6f)
+            lineTo(5.5f, 18f)
+            lineTo(5f, 18f)
+            close()
+        }
+
+        // Third line
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(6.5f, 6f)
+            lineTo(7.5f, 6f)
+            lineTo(7.5f, 18f)
+            lineTo(6.5f, 18f)
+            close()
+        }
+
+        // Fourth line (thick)
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(8.5f, 6f)
+            lineTo(10f, 6f)
+            lineTo(10f, 18f)
+            lineTo(8.5f, 18f)
+            close()
+        }
+
+        // Fifth line
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(11f, 6f)
+            lineTo(11.5f, 6f)
+            lineTo(11.5f, 18f)
+            lineTo(11f, 18f)
+            close()
+        }
+
+        // Sixth line
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(12.5f, 6f)
+            lineTo(13.5f, 6f)
+            lineTo(13.5f, 18f)
+            lineTo(12.5f, 18f)
+            close()
+        }
+
+        // Seventh line (thick)
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(14.5f, 6f)
+            lineTo(16f, 6f)
+            lineTo(16f, 18f)
+            lineTo(14.5f, 18f)
+            close()
+        }
+
+        // Eighth line
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(17f, 6f)
+            lineTo(17.5f, 6f)
+            lineTo(17.5f, 18f)
+            lineTo(17f, 18f)
+            close()
+        }
+
+        // Ninth line (thick)
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(18.5f, 6f)
+            lineTo(20f, 6f)
+            lineTo(20f, 18f)
+            lineTo(18.5f, 18f)
+            close()
+        }
+
+        // Tenth line (edge)
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(21f, 6f)
+            lineTo(21.5f, 6f)
+            lineTo(21.5f, 18f)
+            lineTo(21f, 18f)
+            close()
+        }
+    }.build()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -814,9 +934,9 @@ fun CaptureFoodScreen(navController: NavController) {
                                 .height(56.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.QrCode2,
+                                imageVector = BarcodeIcon,
                                 contentDescription = "Scan Barcode",
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(28.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Scan Barcode")
@@ -831,7 +951,7 @@ fun CaptureFoodScreen(navController: NavController) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.QrCode,
+                                    imageVector = BarcodeIcon,
                                     contentDescription = null,
                                     tint = Primary
                                 )
@@ -1317,7 +1437,7 @@ fun CaptureFoodScreen(navController: NavController) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        imageVector = Icons.Default.QrCode,
+                                        imageVector = BarcodeIcon,
                                         contentDescription = null,
                                         tint = Primary
                                     )
