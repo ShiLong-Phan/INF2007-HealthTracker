@@ -62,6 +62,7 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.unit.sp
 
 // Food Database API Interface
 interface FoodDatabaseApi {
@@ -881,7 +882,7 @@ fun CaptureFoodScreen(navController: NavController) {
                             }
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                "Tap to add a photo",
+                                "Tap to add a photo & Upload to AI",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -940,6 +941,13 @@ fun CaptureFoodScreen(navController: NavController) {
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Scan Barcode")
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                "(Optional)",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 10.sp,
+                                modifier = Modifier.align(Alignment.CenterVertically)
+                            )
                         }
 
                         // Display scanned barcode if available
