@@ -20,6 +20,12 @@ class GeminiService(private val apiKey: String) {
         apiKey = apiKey,
         systemInstruction = Content(parts = listOf(TextPart("provide the result as Calories: <value> kcal"))),    )
 
+    private val foodIdentificationModel = GenerativeModel(
+        modelName = "gemini-2.0-flash-exp",
+        apiKey = apiKey,
+        systemInstruction = Content(parts = listOf(TextPart("Identify the food in the image and respond with just the name of the food in a single line. Be as specific as possible but keep it concise."))),
+    )
+
     suspend fun generateMealPlan(
         age: Int,
         weight: Int,
@@ -83,6 +89,40 @@ class GeminiService(private val apiKey: String) {
             response.text?.split("\n") ?: listOf("No meal plan found.")
         } catch (e: Exception) {
             listOf("Error generating meal plan: ${e.message} Please click on the Refresh icon to try again!")
+        }
+    }
+
+    suspend fun identifyFood(image: Bitmap): List<String> {
+        return try {
+            // Encode Bitmap to Base64
+            val byteArrayOutputStream = ByteArrayOutputStream()
+            image.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream)
+            val byteArray = byteArrayOutputStream.toByteArray()
+            val base64Image = Base64.encodeToString(byteArray, Base64.DEFAULT)
+
+            val prompt = """
+                You are a specialized food recognition AI. Your task is to identify the specific food item shown in this image.
+                Image (Base64 encoded): $base64Image
+                
+                Guidelines for identification:
+                - Be as precise as possible (e.g., "Chicken Tikka Masala" instead of just "Curry")
+                - Consider cultural context and regional dishes
+                - If multiple items are visible, identify the main dish
+                - If the image is unclear, provide your best guess but indicate uncertainty
+                
+                Respond with ONLY the name of the food - nothing else. No explanations or additional text.
+            """.trimIndent()
+
+            val response = foodIdentificationModel.generateContent(
+                Content(parts = listOf(TextPart(prompt)))
+            )
+
+            // Clean the response to extract just the food name
+            val foodName = response.text?.trim()?.replace(Regex("^\"(.*)\"$"), "$1") ?: "Unknown food"
+            listOf(foodName)
+        } catch (e: Exception) {
+            Log.e("GeminiService", "Error identifying food: ${e.message}", e)
+            listOf("Error identifying food: ${e.message}")
         }
     }
 
