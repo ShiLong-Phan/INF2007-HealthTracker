@@ -393,7 +393,7 @@ fun CaptureFoodScreen(navController: NavController) {
                     // Product not found - simply show not found message without AI attempt
                     Log.i("CaptureFoodScreen", "Product not found in database")
 
-                    foodName = "Unknown Product (Barcode: $barcode)"
+                    foodName = ""
                     caloricValue = "0"
                     servingSize = null
                     isPerServing = false
@@ -408,7 +408,7 @@ fun CaptureFoodScreen(navController: NavController) {
                         Toast.LENGTH_LONG
                     ).show()
 
-                    errorMessage = "Product not found. Enter details manually."
+                    errorMessage = "Product not found. Please try again"
                 }
 
                 // Set recognized food to trigger the results display
@@ -1223,8 +1223,11 @@ fun CaptureFoodScreen(navController: NavController) {
                             // Save food data button
                             Button(
                                 onClick = { confirmSave = true },
-                                enabled = foodName.isNotEmpty() && foodName != "No Product Found" &&
-                                        caloricValue.isNotEmpty() && !isProcessing,
+                                enabled = foodName.isNotEmpty() &&
+                                        !foodName.startsWith("Unknown Product") &&
+                                        foodName != "No Product Found" &&
+                                        caloricValue.isNotEmpty() &&
+                                        !isProcessing,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Primary,
                                     contentColor = MaterialTheme.colorScheme.onPrimary,
