@@ -185,11 +185,11 @@ fun EnhancedRestaurantItem(business: Business, userLocation: Location?) {
     }
 
     val ratingColor = when {
-        business.rating >= 4.5 -> Color(0xFF4CAF50) // Excellent - Green
-        business.rating >= 4.0 -> Color(0xFF8BC34A) // Very Good - Light Green
-        business.rating >= 3.5 -> Color(0xFFFFEB3B) // Good - Yellow
-        business.rating >= 3.0 -> Color(0xFFFFC107) // Average - Amber
-        business.rating > 0 -> Color(0xFFFF9800) // Below Average - Orange
+        business.rating >= 4.5 -> Color(0xFF388E3C) // Excellent - Dark Green
+        business.rating >= 4.0 -> Color(0xFF689F38) // Very Good - Medium Green
+        business.rating >= 3.5 -> Color(0xFFFBC02D) // Good - Yellow
+        business.rating >= 3.0 -> Color(0xFFFFA000) // Average - Amber
+        business.rating > 0 -> Color(0xFFF57C00) // Below Average - Orange
         else -> Color.Gray // No Rating
     }
 

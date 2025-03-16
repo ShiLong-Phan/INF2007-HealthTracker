@@ -1,5 +1,8 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.inf2007.healthtracker.Screens
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,10 +16,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.BottomNavigation
@@ -25,7 +29,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Event
@@ -51,12 +54,19 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+
+@SuppressLint("UnrememberedMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     navController: NavController,
     modifier: Modifier = Modifier
 ) {
+    // Current values
     var userName by remember { mutableStateOf("") }
     var userEmail by remember { mutableStateOf("") }
     var userGender by remember { mutableStateOf("") }
@@ -64,11 +74,24 @@ fun ProfileScreen(
     var weight by remember { mutableStateOf("") }
     var height by remember { mutableStateOf("") }
     var activityLevel by remember { mutableStateOf("") }
-    var originalActivityLevel by remember { mutableStateOf(activityLevel) }
     var dietaryPreference by remember { mutableStateOf("") }
     var calorieIntake by remember { mutableStateOf("") }
     var stepsGoal by remember { mutableStateOf("") }
     var hydrationGoal by remember { mutableStateOf("") }
+
+    // Original values (to compare changes)
+    var originalUserName by remember { mutableStateOf("") }
+    var originalUserEmail by remember { mutableStateOf("") }
+    var originalUserAge by remember { mutableStateOf("") }
+    var originalWeight by remember { mutableStateOf("") }
+    var originalHeight by remember { mutableStateOf("") }
+    var originalActivityLevel by remember { mutableStateOf("") }
+    var originalDietaryPreference by remember { mutableStateOf("") }
+    var originalCalorieIntake by remember { mutableStateOf("") }
+    var originalStepsGoal by remember { mutableStateOf("") }
+    var originalHydrationGoal by remember { mutableStateOf("") }
+    var originalUserGender by remember { mutableStateOf("") }
+
     var isEditing by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
@@ -78,6 +101,20 @@ fun ProfileScreen(
 
     val roundedShape = MaterialTheme.shapes.small
 
+    // Derived state: check if any field has changed
+    val isDataChanged by derivedStateOf {
+        (userName != originalUserName) ||
+        (userEmail != originalUserEmail) ||
+        (userAge != originalUserAge) ||
+        (weight != originalWeight) ||
+        (height != originalHeight) ||
+        (activityLevel != originalActivityLevel) ||
+        (dietaryPreference != originalDietaryPreference) ||
+        (calorieIntake != originalCalorieIntake) ||
+        (stepsGoal != originalStepsGoal) ||
+        (hydrationGoal != originalHydrationGoal) ||
+        (userGender != originalUserGender)
+    }
     // Fetch user data from Firebase
     LaunchedEffect(Unit) {
         user?.let {
@@ -93,11 +130,24 @@ fun ProfileScreen(
                     weight = document.getLong("weight")?.toString() ?: "0"  // Ensure weight is treated as a number
                     height = document.getLong("height")?.toString() ?: "0"  // Ensure height is treated as a number
                     activityLevel = document.getString("activity_level") ?: "Not Set"
-                    originalActivityLevel = activityLevel
                     dietaryPreference = document.getString("dietary_preference") ?: "None"
                     calorieIntake = document.getLong("calorie_intake")?.toString() ?: "0"  // Ensure calorieIntake is treated as a number
                     stepsGoal = document.getLong("steps_goal")?.toString() ?: "0"  // Ensure stepsGoal is treated as a number
                     hydrationGoal = document.getLong("hydration_goal")?.toString() ?: "0"  // Ensure hydrationGoal is treated as a number
+
+                    // Initialize original values when data is fetched.
+                    originalUserName = userName
+                    originalUserEmail = userEmail
+                    originalUserAge = userAge
+                    originalWeight = weight
+                    originalHeight = height
+                    originalActivityLevel = activityLevel
+                    originalDietaryPreference = dietaryPreference
+                    originalCalorieIntake = calorieIntake
+                    originalStepsGoal = stepsGoal
+                    originalHydrationGoal = hydrationGoal
+                    originalUserGender = userGender
+
                     isLoading = false
                 }
                 .addOnFailureListener { exception ->
@@ -156,11 +206,11 @@ fun ProfileScreen(
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Text(
-                                    text = "$userName",
+                                    text = userName,
                                     style = MaterialTheme.typography.headlineLarge
                                 )
                                 Text(
-                                    text = "$userEmail",
+                                    text = userEmail,
                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Normal)
                                 )
                             }
@@ -206,7 +256,7 @@ fun ProfileScreen(
                                             style = MaterialTheme.typography.bodyLarge.toSpanStyle()
                                                 .copy(color = Color.White)
                                         ) {
-                                            append("$userGender")
+                                            append(userGender)
                                         }
                                     },
                                     textAlign = TextAlign.Center
@@ -270,7 +320,7 @@ fun ProfileScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                            verticalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
                             // Activity Level Row
                             Row(
@@ -294,7 +344,7 @@ fun ProfileScreen(
                                 Spacer(modifier = Modifier.weight(1f))  // Pushes the value to the right
 
                                 Text(
-                                    text = "$activityLevel",
+                                    text = activityLevel,
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                             }
@@ -321,7 +371,7 @@ fun ProfileScreen(
                                 Spacer(modifier = Modifier.weight(1f))  // Pushes the value to the right
 
                                 Text(
-                                    text = "$dietaryPreference",
+                                    text = dietaryPreference,
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                             }
@@ -467,7 +517,6 @@ fun ProfileScreen(
                                 )
                             }
                         }
-
                     } else {
                         // Edit Mode
                         Column(
@@ -607,7 +656,6 @@ fun ProfileScreen(
                                 Column(
                                     modifier = Modifier.weight(1f) // Makes this column take up half of the row's width
                                 ) {
-
                                     OutlinedTextField(
                                         value = stepsGoal,
                                         onValueChange = { stepsGoal = it.filter { char -> char.isDigit() } },
@@ -629,8 +677,6 @@ fun ProfileScreen(
                                         ),
                                         modifier = Modifier.fillMaxWidth()
                                     )
-
-
                                 }
 
                                 Column(
@@ -657,7 +703,6 @@ fun ProfileScreen(
                                         ),
                                         modifier = Modifier.fillMaxWidth()
                                     )
-
                                 }
                             }
 
@@ -713,19 +758,21 @@ fun ProfileScreen(
                                 )
                             }
 
-                            // Gender Radio Buttons
-                            Column(
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
-                                    Text("Gender", style = MaterialTheme.typography.bodyLarge)
-                                    Spacer(modifier = Modifier.width(8.dp))
+                            // Activity Level Radio Buttons
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Text("Gender", style = MaterialTheme.typography.bodyLarge)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Start
+                                ) {
                                     RadioButton(
                                         selected = userGender == "Male",
                                         onClick = { userGender = "Male" }
                                     )
                                     Text("Male")
+
                                     Spacer(modifier = Modifier.width(8.dp))
+
                                     RadioButton(
                                         selected = userGender == "Female",
                                         onClick = { userGender = "Female" }
@@ -734,53 +781,33 @@ fun ProfileScreen(
                                 }
                             }
 
-                            // Activity Level Radio Buttons
+                            // Activity Level Filter Chips
                             Column(
-                                modifier = Modifier.fillMaxWidth().padding(0.dp)
+                                modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text("Activity Level", style = MaterialTheme.typography.bodyLarge)
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-                                    // Active Button
-                                    OutlinedButton(
-                                        onClick = { activityLevel = "Active" },
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            containerColor = MaterialTheme.colorScheme.background,
-                                            contentColor = if (activityLevel == "Active") Primary else Unfocused
-                                        ),
-                                        border = BorderStroke(1.dp, if (activityLevel == "Active") Primary else Unfocused),
-                                        modifier = Modifier.padding(end = 10.dp)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 8.dp)
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val activityOptions = listOf("Active", "Moderate", "Sedentary")
+                                    activityOptions.forEach { option ->
+                                        FilterChip(
+                                            selected = (activityLevel == option),
+                                            onClick = { activityLevel = option },
+                                            label = { Text(option) },
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = Primary,
+                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                                containerColor = MaterialTheme.colorScheme.background,
+                                                labelColor = Unfocused
+                                            )
+                                        )
 
-                                    ) {
-                                        Text("Active")
-                                    }
-
-                                    // Moderate Button
-                                    OutlinedButton(
-                                        onClick = { activityLevel = "Moderate" },
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            containerColor = MaterialTheme.colorScheme.background,
-                                            contentColor = if (activityLevel == "Moderate") Primary else Unfocused
-                                        ),
-                                        border = BorderStroke(1.dp, if (activityLevel == "Moderate") Primary else Unfocused),
-                                        modifier = Modifier.padding(end = 10.dp)
-                                    ) {
-                                        Text("Moderate")
-                                    }
-
-
-                                }
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-                                    // Sedentary Button
-                                    OutlinedButton(
-                                        onClick = { activityLevel = "Sedentary" },
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            containerColor = MaterialTheme.colorScheme.background,
-                                            contentColor = if (activityLevel == "Sedentary") Primary else Unfocused
-                                        ),
-                                        border = BorderStroke(1.dp, if (activityLevel == "Sedentary") Primary else Unfocused),
-                                        modifier = Modifier.padding(end = 10.dp)
-                                    ) {
-                                        Text("Sedentary")
                                     }
                                 }
                             }
@@ -815,8 +842,20 @@ fun ProfileScreen(
                                 // Cancel Changes Button
                                 Button(
                                     onClick = {
-                                        isEditing = false
+                                        // Revert current fields back to original values
+                                        userName = originalUserName
+                                        userEmail = originalUserEmail
+                                        userAge = originalUserAge
+                                        weight = originalWeight
+                                        height = originalHeight
                                         activityLevel = originalActivityLevel
+                                        dietaryPreference = originalDietaryPreference
+                                        calorieIntake = originalCalorieIntake
+                                        stepsGoal = originalStepsGoal
+                                        hydrationGoal = originalHydrationGoal
+                                        userGender = originalUserGender
+
+                                        isEditing = false
                                     },
                                     shape = roundedShape,
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.background, contentColor = Primary, ),
@@ -829,21 +868,19 @@ fun ProfileScreen(
                                 // Save Changes Button
                                 Button(
                                     onClick = {
+                                        // Perform save operation, e.g., update Firestore.
                                         isLoading = true
-
                                         val updates: MutableMap<String, Any> = mutableMapOf(
                                             "name" to userName,
                                             "age" to userAge,
                                             "gender" to userGender,
                                             "email" to userEmail,
-                                            "gender" to userGender,
                                             "activity_level" to activityLevel,
                                             "dietary_preference" to dietaryPreference,
                                             "steps_goal" to stepsGoal,
                                             "hydration_goal" to hydrationGoal
                                         )
-
-                                        // Ensure weight and height are stored as Integers only if valid
+                                        // Convert number fields if possible
                                         userAge.toIntOrNull()?.let { updates["age"] = it }
                                         weight.toIntOrNull()?.let { updates["weight"] = it }
                                         height.toIntOrNull()?.let { updates["height"] = it }
@@ -855,13 +892,26 @@ fun ProfileScreen(
                                             .document(user!!.uid)
                                             .update(updates)
                                             .addOnSuccessListener {
+                                                // Update original values to current values after a successful save.
+                                                originalUserName = userName
+                                                originalUserEmail = userEmail
+                                                originalUserAge = userAge
+                                                originalWeight = weight
+                                                originalHeight = height
+                                                originalActivityLevel = activityLevel
+                                                originalDietaryPreference = dietaryPreference
+                                                originalCalorieIntake = calorieIntake
+                                                originalStepsGoal = stepsGoal
+                                                originalHydrationGoal = hydrationGoal
+                                                originalUserGender = userGender
+
                                                 isLoading = false
                                                 Toast.makeText(
                                                     context,
                                                     "Profile updated!",
                                                     Toast.LENGTH_SHORT
                                                 ).show()
-                                                isEditing = false // Exit Edit Mode
+                                                isEditing = false
                                             }
                                             .addOnFailureListener { exception ->
                                                 isLoading = false
@@ -870,7 +920,8 @@ fun ProfileScreen(
                                     },
                                     shape = roundedShape,
                                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                                    modifier = Modifier.height(56.dp).weight(1f)
+                                    modifier = Modifier.height(56.dp).weight(1f),
+                                    enabled = isDataChanged // Save enabled only when data has changed.
                                 ) {
                                     Text("Save")
                                 }
