@@ -155,7 +155,7 @@ fun DashboardScreen(
         )
     }
 
-    // Fetch user data from Firestore (for general settings)
+    // Fetch user data from firestore (for general settings)
     LaunchedEffect(Unit) {
         currentUser?.let { user ->
             val calendar = Calendar.getInstance() // Uses TimeZone.getDefault()
