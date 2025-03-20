@@ -77,7 +77,6 @@ An intelligent fitness companion that helps you monitor daily activity, track nu
      GEMINI_API_KEY=your_gemini_api_key_here
      YELP_API_KEY=your_yelp_api_key_here
      ```
-   - **Important**: Never share your API keys publicly or commit them to version control
 
 5. Build and run the app.
 
