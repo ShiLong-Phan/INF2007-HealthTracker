@@ -655,12 +655,16 @@ fun WeeklyStepsLineGraphWithAxes(
     weeklySteps: List<Int>,
     dateLabels: List<String>
 ) {
+    // Check if all step values are zero
+    val isStepsDataEmpty = weeklySteps.all { it == 0 }
     // State to control whether the axes should be visible
     var showAxes by remember { mutableStateOf(false) }
     // After 3 seconds, set showAxes to true
     LaunchedEffect(Unit) {
-        delay(2000)
-        showAxes = true
+        if (!isStepsDataEmpty) {
+            delay(2000)  // Only delay if there's data
+            showAxes = true
+        }
     }
 
     // Compute min/max from the data
@@ -673,8 +677,9 @@ fun WeeklyStepsLineGraphWithAxes(
     val bottomPaddingPx = 40f  // space for x-axis labels
     val primaryColor = MaterialTheme.colorScheme.primary
 
-    // Number of horizontal "ticks" for the y-axis
-    val labelCount = 5
+
+    // Only set labelCount if there is meaningful data
+    val labelCount = if (isStepsDataEmpty) 0 else 5
     // Calculate the step increment for each label
     val stepIncrement = (range / (labelCount - 1)).coerceAtLeast(1)
 
@@ -686,6 +691,34 @@ fun WeeklyStepsLineGraphWithAxes(
         // The usable chart area is reduced by our left/bottom padding
         val chartWidth = size.width - leftPaddingPx
         val chartHeight = size.height - bottomPaddingPx
+
+        if (showAxes) { // Only draw y-axis labels when data is present
+            for (i in 0 until labelCount) {
+                val labelValue = minSteps + i * stepIncrement
+                val fraction = (labelValue - minSteps) / range.toFloat()
+                val yCoord = chartHeight * (1 - fraction)
+
+                drawLine(
+                    color = Color.Black,
+                    start = Offset(x = leftPaddingPx - 5f, y = yCoord),
+                    end = Offset(x = leftPaddingPx, y = yCoord),
+                    strokeWidth = 2f
+                )
+
+                drawContext.canvas.nativeCanvas.apply {
+                    drawText(
+                        labelValue.toString(),
+                        leftPaddingPx - 10f,
+                        yCoord + 8f,
+                        android.graphics.Paint().apply {
+                            textSize = 32f
+                            textAlign = android.graphics.Paint.Align.RIGHT
+                            color = android.graphics.Color.BLACK
+                        }
+                    )
+                }
+            }
+        }
 
         // Conditionally draw the axes lines and y-axis labels
         if (showAxes) {
@@ -1057,10 +1090,11 @@ fun WeeklyCalorieBarChart(
     weeklyCalories: List<Int>,
     dateLabels: List<String>
 ) {
+    val isDataEmpty = weeklyCalories.all { it == 0 }
     // Optional: a state to show/hide axes after some delay, just like you did for the line graph
     var showAxes by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        delay(2000)
+        //delay(50)
         showAxes = true
     }
 
@@ -1074,12 +1108,21 @@ fun WeeklyCalorieBarChart(
     val bottomPaddingPx = 40f
 
     // Number of horizontal "ticks" for the y-axis
-    val labelCount = 5
-    // Calculate the step increment between each tick label on the y-axis
-    val stepIncrement = (range / (labelCount - 1)).coerceAtLeast(1)
+    //val labelCount = 5
+
 
     // Primary color for bars
     val barColor = MaterialTheme.colorScheme.primary
+
+
+
+    // Number of horizontal "ticks" for the y-axis
+    val labelCount = if (isDataEmpty) 0 else 5 // Hide labels if all data is 0
+    // Calculate the step increment between each tick label on the y-axis
+    val stepIncrement = (range / (labelCount - 1)).coerceAtLeast(1)
+
+
+
 
     Canvas(
         modifier = Modifier
@@ -1089,6 +1132,36 @@ fun WeeklyCalorieBarChart(
         // The usable chart area is reduced by our left/bottom padding
         val chartWidth = size.width - leftPaddingPx
         val chartHeight = size.height - bottomPaddingPx
+
+        if (!isDataEmpty) { // Only draw axis labels when data is present
+            for (i in 0 until labelCount) {
+                val labelValue = minCalories + i * stepIncrement
+                val fraction = (labelValue - minCalories) / range.toFloat()
+                val yCoord = chartHeight * (1 - fraction)
+
+                // Tick mark on the y-axis
+                drawLine(
+                    color = Color.Black,
+                    start = Offset(x = leftPaddingPx - 5f, y = yCoord),
+                    end = Offset(x = leftPaddingPx, y = yCoord),
+                    strokeWidth = 2f
+                )
+
+                // Draw label text
+                drawContext.canvas.nativeCanvas.apply {
+                    drawText(
+                        labelValue.toString(),
+                        leftPaddingPx - 10f,
+                        yCoord + 8f,
+                        android.graphics.Paint().apply {
+                            textSize = 32f
+                            textAlign = android.graphics.Paint.Align.RIGHT
+                            color = android.graphics.Color.BLACK
+                        }
+                    )
+                }
+            }
+        }
 
         // 1. Draw axes (optional)
         if (showAxes) {
