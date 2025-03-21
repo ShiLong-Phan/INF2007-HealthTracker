@@ -18,7 +18,6 @@ import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -45,7 +44,6 @@ import androidx.compose.ui.text.withStyle
 import com.inf2007.healthtracker.utilities.BottomNavigationBar
 import com.inf2007.healthtracker.ui.theme.Primary
 import com.inf2007.healthtracker.ui.theme.Secondary
-import com.inf2007.healthtracker.ui.theme.SecondaryContainer
 import com.inf2007.healthtracker.ui.theme.Tertiary
 import com.inf2007.healthtracker.ui.theme.Unfocused
 import java.text.SimpleDateFormat
@@ -182,6 +180,7 @@ fun ProfileScreen(
                 Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
             }
         } else {
+            // Main content: Use LazyColumn for efficient vertical scrolling
             LazyColumn(
                 modifier = modifier
                     .fillMaxSize()
@@ -191,15 +190,18 @@ fun ProfileScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 item {
+                // Check if the user is in view mode or edit mode
                     if (!isEditing) {
-                        // View Mode
+                        // ===============================
+                        // VIEW MODE: Display profile details
+                        // ===============================
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp),
                             verticalAlignment = Alignment.Top
                         ) {
-                            // Texts on the left
+                            // Left side: Display user's name and email
                             Column(
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -213,7 +215,7 @@ fun ProfileScreen(
                                 )
                             }
 
-                            // Edit icon on the right
+                            // Right side: Edit icon to switch to edit mode
                             IconButton(
                                 onClick = { isEditing = true },
                                 modifier = Modifier.size(24.dp)
@@ -226,6 +228,7 @@ fun ProfileScreen(
                             }
                         }
 
+                        // Card showing detailed user information (Gender, Weight, Height)
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -233,7 +236,7 @@ fun ProfileScreen(
                             shape = roundedShape,
                             colors = CardDefaults.cardColors(containerColor = Secondary)
                         ) {
-                            // User Details
+                            // Row with evenly spaced details
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -241,7 +244,7 @@ fun ProfileScreen(
                                 horizontalArrangement = Arrangement.SpaceEvenly,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // Gender
+                                // Display Gender
                                 Text(
                                     text = buildAnnotatedString {
                                         withStyle(
@@ -260,6 +263,7 @@ fun ProfileScreen(
                                     textAlign = TextAlign.Center
                                 )
 
+                                // Divider between details
                                 VerticalDivider(
                                     modifier = Modifier
                                         .height(40.dp)
@@ -267,7 +271,7 @@ fun ProfileScreen(
                                     color = Color.White
                                 )
 
-                                // Weight
+                                // Display Weight with fallback if not set
                                 Text(
                                     text = buildAnnotatedString {
                                         withStyle(
@@ -286,6 +290,7 @@ fun ProfileScreen(
                                     textAlign = TextAlign.Center
                                 )
 
+                                // Divider between details
                                 VerticalDivider(
                                     modifier = Modifier
                                         .height(40.dp)
@@ -293,7 +298,7 @@ fun ProfileScreen(
                                     color = Color.White
                                 )
 
-                                // Height
+                                // Display Height with fallback if not set
                                 Text(
                                     text = buildAnnotatedString {
                                         withStyle(
@@ -314,13 +319,16 @@ fun ProfileScreen(
                             }
                         }
 
+                        // Additional profile details like activity level, dietary preference, etc.
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
+                            // ---------------------------
                             // Activity Level Row
+                            // ---------------------------
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
@@ -347,7 +355,9 @@ fun ProfileScreen(
                                 )
                             }
 
+                            // ---------------------------
                             // Dietary Preference Row
+                            // ---------------------------
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
@@ -374,7 +384,9 @@ fun ProfileScreen(
                                 )
                             }
 
+                            // ---------------------------
                             // Calorie Intake Row
+                            // ---------------------------
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
@@ -401,10 +413,15 @@ fun ProfileScreen(
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                             }
+
+                            // ---------------------------
+                            // Calories Burned Calculation and Display
+                            // ---------------------------
+
                             // Calculate calories burned using a simple estimation formula
                             val weightNumber = weight.toDoubleOrNull() ?: 0.0
                             val caloriesBurned = (steps * weightNumber * 0.0005).toInt()
-                            //Calories burned
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
@@ -431,7 +448,9 @@ fun ProfileScreen(
                                 )
                             }
 
-                            //Steps goal
+                            // ---------------------------
+                            // Steps Goal Row
+                            // ---------------------------
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
@@ -459,7 +478,9 @@ fun ProfileScreen(
                                 )
                             }
 
-                            //Hydration Goal
+                            // ---------------------------
+                            // Hydration Goal Row
+                            // ---------------------------
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
@@ -487,7 +508,9 @@ fun ProfileScreen(
                                 )
                             }
 
+                            // ---------------------------
                             // Logout Row
+                            // ---------------------------
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -516,12 +539,16 @@ fun ProfileScreen(
                             }
                         }
                     } else {
-                        // Edit Mode
+                        // ===============================
+                        // EDIT MODE: Display editable fields for user profile
+                        // ===============================
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 0.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
+                            // ---------------------------
                             // Name Text Field
+                            // ---------------------------
                             OutlinedTextField(
                                 value = userName,
                                 onValueChange = { userName = it },
@@ -540,7 +567,9 @@ fun ProfileScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
 
+                            // ---------------------------
                             // Email Text Field
+                            // ---------------------------
                             OutlinedTextField(
                                 value = userEmail,
                                 onValueChange = { userEmail = it },
@@ -559,7 +588,9 @@ fun ProfileScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
 
-                            // Age Text Field
+                            // ---------------------------
+                            // Age Text Field: Only digits allowed
+                            // ---------------------------
                             OutlinedTextField(
                                 value = userAge,
                                 onValueChange = { userAge = it.filter { char -> char.isDigit() } },
@@ -582,7 +613,9 @@ fun ProfileScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
 
-                            // Dietary Preference and Calorie Intake Row
+                            // ---------------------------
+                            // Row for Dietary Preference and Calorie Intake fields
+                            // ---------------------------
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -646,7 +679,9 @@ fun ProfileScreen(
                                 }
                             }
 
-                            //Steps and Hydration Row
+                            // ---------------------------
+                            // Row for Steps and Hydration fields
+                            // ---------------------------
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -704,7 +739,9 @@ fun ProfileScreen(
                                 }
                             }
 
-                            // Weight and Height Row
+                            // ---------------------------
+                            // Row for Weight and Height fields
+                            // ---------------------------
                             Row (
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -756,7 +793,9 @@ fun ProfileScreen(
                                 )
                             }
 
-                            // Activity Level Radio Buttons
+                            // ---------------------------
+                            // Gender selection
+                            // ---------------------------
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text("Gender", style = MaterialTheme.typography.bodyLarge)
                                 Row(
@@ -779,7 +818,9 @@ fun ProfileScreen(
                                 }
                             }
 
-                            // Activity Level Filter Chips
+                            // ---------------------------
+                            // Activity Level selection
+                            // ---------------------------
                             Column(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -805,12 +846,13 @@ fun ProfileScreen(
                                                 labelColor = Unfocused
                                             )
                                         )
-
                                     }
                                 }
                             }
 
-                            // Calculate Recommended Intake Button
+                            // ---------------------------
+                            // Calculate recommended calorie intake using BMR
+                            // ---------------------------
                             Button(
                                 onClick = {
                                     val weightValue = weight.toDoubleOrNull() ?: 0.0
@@ -832,12 +874,14 @@ fun ProfileScreen(
                                 Text("Calculate Recommended Intake")
                             }
 
-                            // CTA Buttons Row
+                            // ---------------------------
+                            // Row with Cancel and Save buttons
+                            // ---------------------------
                             Row (
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ){
-                                // Cancel Changes Button
+                                // Cancel Changes Button: Revert any changes made
                                 Button(
                                     onClick = {
                                         // Revert current fields back to original values
@@ -863,7 +907,7 @@ fun ProfileScreen(
                                     Text("Cancel")
                                 }
 
-                                // Save Changes Button
+                                // Save Changes Button: Commit changes and update data in Firestore
                                 Button(
                                     onClick = {
                                         // Perform save operation, e.g., update Firestore.
@@ -924,6 +968,8 @@ fun ProfileScreen(
                                     Text("Save")
                                 }
                             }
+
+                            Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
                 }
@@ -940,6 +986,3 @@ fun calculateBMR(weight: Double, height: Double, age: Int, gender: String): Doub
         9.247 * weight + 3.098 * height - 4.330 * age + 447.593
     }
 }
-
-
-
