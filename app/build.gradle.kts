@@ -17,7 +17,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "yelpApiKey", "\"96o7KETt8Y1dWAiAvpgWKJe0pSZEX-UN08DgEkRBLQHq7SBoRA_ODC5IMOF1XAKs_8ZQ5_SvRHJgMtsiBJAbKYeq4NAhLv29v6V_uakSS7Y_CTxTr8EJ1sipi4i0Z3Yx\"")
+        buildConfigField("String", "yelpApiKey", "\"cS08fZQZyFGGk4IzsL3k7db4sNC3PZaHX1qbYZnoMhKk0a5J4ZJ7Nth5eNzLSUIXZBXGuVphtoI1BuGd7Ke7tPHWzhinm5lKzUmXp2SVQjfoUA_zcfbtlWO8SKbfZ3Yx\"")
         buildConfigField("String", "geminiApiKey", "\"AIzaSyA4uGSf1RJBaus-Gz9AWXcMbPBAAMIlpJk\"")
     }
 
