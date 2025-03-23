@@ -134,12 +134,12 @@ object FoodDatabaseService {
                     // Direct kcal value
                     nutriments.energy_value
                 } else {
-                    // Fall back to other fields
-                    nutriments?.energy_kcal_serving // Calories per serving
-                        ?: nutriments?.energy_kcal_value // Sometimes used for per serving
+                    // For package calculations, we prefer per 100g values
+                    nutriments?.energy_kcal_100g // First try per 100g value
                         ?: nutriments?.calories // Generic calories field
-                        ?: nutriments?.energy_kcal_100g // Fallback to 100g
                         ?: nutriments?.energy_kcal // Another variant of energy in kcal
+                        ?: nutriments?.energy_kcal_value // Sometimes used for per 100g too
+                        ?: nutriments?.energy_kcal_serving // Last resort - per serving
                         ?: if (nutriments?.energy_unit == "kJ" && nutriments.energy_value != null) {
                             // Convert kJ to kcal if energy_unit is explicitly "kJ"
                             nutriments.energy_value / 4.184f
