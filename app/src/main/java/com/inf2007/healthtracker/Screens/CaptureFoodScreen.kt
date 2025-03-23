@@ -130,29 +130,47 @@ object FoodDatabaseService {
 
                 // Per serving or per 100g calories - priority order for extracting calories
                 // First, check if energy_unit is kcal and energy_value exists
-                val perUnitCalories = if (nutriments?.energy_unit == "kcal" && nutriments.energy_value != null) {
-                    // Direct kcal value
-                    nutriments.energy_value
+                val perUnitCalories = if (nutriments?.energy_unit == "kcal") {
+                    if (nutriments.energy_value != null && nutriments.energy_100g != null) {
+                        // If both values exist, we need to determine which is per 100g
+                        // Typically, the energy_100g is the per 100g value (even if in kJ)
+                        // and energy_value is often the per serving value
+                        if (nutriments.energy_100g > nutriments.energy_value) {
+                            // If energy_100g is greater, it's likely in kJ and needs conversion
+                            // 1720 kJ ÷ 4.184 = 410 kcal
+                            (nutriments.energy_100g / 4.184f).toInt().toFloat()
+                        } else {
+                            // If energy_value is greater, it might be the per 100g value
+                            nutriments.energy_value
+                        }
+                    } else if (nutriments.energy_value != null) {
+                        nutriments.energy_value
+                    } else if (nutriments.energy_100g != null) {
+                        // Convert from kJ to kcal
+                        nutriments.energy_100g / 4.184f
+                    } else {
+                        // Fall back to other fields
+                        nutriments.energy_kcal_100g
+                            ?: nutriments.calories
+                            ?: nutriments.energy_kcal
+                            ?: 0f
+                    }
                 } else {
-                    // For package calculations, we prefer per 100g values
-                    nutriments?.energy_kcal_100g // First try per 100g value
-                        ?: nutriments?.calories // Generic calories field
-                        ?: nutriments?.energy_kcal // Another variant of energy in kcal
-                        ?: nutriments?.energy_kcal_value // Sometimes used for per 100g too
-                        ?: nutriments?.energy_kcal_serving // Last resort - per serving
-                        ?: if (nutriments?.energy_unit == "kJ" && nutriments.energy_value != null) {
-                            // Convert kJ to kcal if energy_unit is explicitly "kJ"
-                            nutriments.energy_value / 4.184f
-                        } else if (nutriments?.energy != null) {
-                            // Assuming energy is in kJ if no unit specified
+                    // If unit is not explicitly kcal, use the fallback logic
+                    nutriments?.energy_kcal_100g
+                        ?: nutriments?.calories
+                        ?: nutriments?.energy_kcal
+                        ?: if (nutriments?.energy != null) {
+                            // Convert from kJ
                             nutriments.energy / 4.184f
                         } else if (nutriments?.energy_100g != null) {
-                            // Assuming energy_100g is in kJ if no unit specified
+                            // Convert from kJ
                             nutriments.energy_100g / 4.184f
                         } else {
                             0f
                         }
                 }
+
 
                 // Debug info
                 Log.d("FoodDatabaseService", "Nutriment data: ${nutriments.toString()}")
