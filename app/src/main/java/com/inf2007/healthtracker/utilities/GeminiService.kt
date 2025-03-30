@@ -1,12 +1,15 @@
 package com.inf2007.healthtracker.utilities
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory // Needed to decode byte array back to Bitmap for ImagePart
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.Content
 import com.google.ai.client.generativeai.type.TextPart
+import com.google.ai.client.generativeai.type.ImagePart // <-- Import ImagePart
+import com.google.ai.client.generativeai.type.content // <-- Import content builder
 import com.google.ai.client.generativeai.type.generationConfig
 import java.io.ByteArrayOutputStream
-import android.util.Base64
+import android.util.Base64 // Base64 might still be useful elsewhere, but not for sending image content here
 import android.util.Log
 import java.io.BufferedOutputStream
 import kotlinx.coroutines.Dispatchers
@@ -14,15 +17,16 @@ import kotlinx.coroutines.withContext
 
 class GeminiService(private val apiKey: String) {
 
-    // Main model for general use
+    // --- Model Initializations (Consider changing model names as discussed previously) ---
+    // --- e.g., use "gemini-1.5-pro-latest" or "gemini-1.5-flash-latest" ---
+
     private val generativeModel = GenerativeModel(
-        modelName = "gemini-2.0-flash-exp",
+        modelName = "gemini-2.0-flash-exp", // Example: updated model name
         apiKey = apiKey
     )
 
-    // Food identification model with specific system instruction
     private val foodIdentificationModel = GenerativeModel(
-        modelName = "gemini-2.0-flash-exp",
+        modelName = "gemini-1.5-pro-latest", // Example: updated model name for better vision
         apiKey = apiKey,
         systemInstruction = Content(parts = listOf(TextPart(
             "You are a food identification expert. Identify the exact food item in the image with high precision. " +
@@ -31,28 +35,22 @@ class GeminiService(private val apiKey: String) {
                     "If multiple items are visible, identify the main dish.")))
     )
 
-    // Food recognition model with specific system instruction for calorie estimates
     private val foodRecognitionModel = GenerativeModel(
-        modelName = "gemini-2.0-flash-exp",
+        modelName = "gemini-1.5-pro-latest", // Example: updated model name for better vision
         apiKey = apiKey,
         systemInstruction = Content(parts = listOf(TextPart(
             "You are a food nutrition expert. Analyze the image and provide the exact caloric value. " +
                     "Respond only with 'Calories: X kcal' where X is a precise number, not a range.")))
     )
 
-    // Function to optimize image specifically for Gemini Vision API
+    // --- optimizeImageForGemini function remains unchanged ---
     private suspend fun optimizeImageForGemini(bitmap: Bitmap): ByteArray = withContext(Dispatchers.IO) {
         val width = bitmap.width
         val height = bitmap.height
-
-        // Target resolution - not too small to lose details, not too large to cause issues
-        // Gemini works well with images around 768-1024px on the longest side
         val maxDimension = 1024
-
         var targetWidth = width
         var targetHeight = height
 
-        // Only resize if image is larger than our target resolution
         if (width > maxDimension || height > maxDimension) {
             if (width > height) {
                 targetWidth = maxDimension
@@ -63,20 +61,17 @@ class GeminiService(private val apiKey: String) {
             }
         }
 
-        // Create a resized bitmap if needed
         val optimizedBitmap = if (targetWidth != width || targetHeight != height) {
             Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, true)
         } else {
             bitmap
         }
 
-        // Use a high quality JPEG compression - quality 95 is a good balance
         val byteArrayOutputStream = ByteArrayOutputStream()
         val bufferedOutputStream = BufferedOutputStream(byteArrayOutputStream)
         optimizedBitmap.compress(Bitmap.CompressFormat.JPEG, 95, bufferedOutputStream)
         bufferedOutputStream.flush()
 
-        // If we created a new bitmap, recycle it to free memory
         if (optimizedBitmap != bitmap) {
             optimizedBitmap.recycle()
         }
@@ -84,7 +79,7 @@ class GeminiService(private val apiKey: String) {
         return@withContext byteArrayOutputStream.toByteArray()
     }
 
-    // Meal plan generation function remains unchanged
+    // --- generateMealPlan function remains unchanged ---
     suspend fun generateMealPlan(
         age: Int,
         weight: Int,
@@ -147,45 +142,45 @@ class GeminiService(private val apiKey: String) {
 
             response.text?.split("\n") ?: listOf("No meal plan found.")
         } catch (e: Exception) {
+            Log.e("GeminiService", "Error generating meal plan: ${e.message}", e) // Log error
             listOf("Error generating meal plan: ${e.message} Please click on the Refresh icon to try again!")
         }
     }
 
-    // Food identification using proper Base64 encoding
+    // --- CORRECTED Food identification using proper multimodal content ---
     suspend fun identifyFood(image: Bitmap): List<String> {
         return try {
             Log.d("GeminiService", "Starting food identification")
 
             // Optimize image for the API
             val imageBytes = optimizeImageForGemini(image)
-            val base64Image = Base64.encodeToString(imageBytes, Base64.NO_WRAP)
 
-            // Create a more focused prompt
-            val prompt = """
-                I need you to identify this food with high precision.
-                
-                [IMAGE]
-                data:image/jpeg;base64,$base64Image
-                [/IMAGE]
-                
-                What specific food is this? Provide ONLY the name of the food in a single line.
-                Be very specific (e.g., "Chicken Tikka Masala" instead of just "Curry").
-            """.trimIndent()
+            // Create Bitmap from optimized bytes for ImagePart
+            val optimizedBitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
 
-            val response = foodIdentificationModel.generateContent(Content(parts = listOf(TextPart(prompt))))
+            // *** CORRECTED MULTIMODAL CONTENT ***
+            // Use the content builder to combine image and text parts
+            val inputContent = content {
+                image(optimizedBitmap) // Pass the Bitmap object
+                text("What specific food is this? Provide ONLY the name of the food in a single line. Be very specific (e.g., \"Chicken Tikka Masala\" instead of just \"Curry\"). If multiple items are visible, identify the main dish.")
+            }
+
+            // Generate content using the structured input
+            val response = foodIdentificationModel.generateContent(inputContent)
 
             // Clean the response to extract just the food name
             val foodName = response.text?.trim()?.replace(Regex("^\"(.*)\"$"), "$1") ?: "Unknown food"
             Log.d("GeminiService", "Food identified as: $foodName")
 
             listOf(foodName)
+
         } catch (e: Exception) {
             Log.e("GeminiService", "Error identifying food: ${e.message}", e)
             listOf("Error identifying food: ${e.message}")
         }
     }
 
-    // Improved calorie recognition function
+    // --- CORRECTED Calorie recognition function using proper multimodal content ---
     suspend fun doFoodRecognition(image: Bitmap?, foodName: String): List<String> {
         return try {
             if (image != null) {
@@ -193,21 +188,19 @@ class GeminiService(private val apiKey: String) {
 
                 // Optimize image
                 val imageBytes = optimizeImageForGemini(image)
-                val base64Image = Base64.encodeToString(imageBytes, Base64.NO_WRAP)
 
-                // Create a prompt focused on calorie calculation
-                val prompt = """
-                    I need the exact caloric value of this $foodName.
-                    
-                    [IMAGE]
-                    data:image/jpeg;base64,$base64Image
-                    [/IMAGE]
-                    
-                    Provide ONLY the caloric value in the format "Calories: X kcal", where X is a precise number.
-                    DO NOT provide a range or explanation, just the format "Calories: X kcal".
-                """.trimIndent()
+                // Create Bitmap from optimized bytes
+                val optimizedBitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
 
-                val response = foodRecognitionModel.generateContent(Content(parts = listOf(TextPart(prompt))))
+                // *** CORRECTED MULTIMODAL CONTENT ***
+                // Use the content builder for image and text
+                val inputContent = content {
+                    image(optimizedBitmap) // Pass the Bitmap object
+                    text("I need the exact caloric value of this $foodName. Provide ONLY the caloric value in the format \"Calories: X kcal\", where X is a precise number. DO NOT provide a range or explanation, just the format \"Calories: X kcal\".")
+                }
+
+                // Generate content using structured input
+                val response = foodRecognitionModel.generateContent(inputContent)
 
                 val responseText = response.text ?: ""
                 Log.d("GeminiService", "Raw calorie response: $responseText")
@@ -221,17 +214,18 @@ class GeminiService(private val apiKey: String) {
                     Log.d("GeminiService", "Extracted calorie value: $calorieValue")
                     listOf("Calories: $calorieValue kcal")
                 } else {
-                    // Fallback to filter digits if regex fails
-                    val estimatedCaloricValue = responseText.filter { it.isDigit() }.toIntOrNull() ?: 0
-                    Log.d("GeminiService", "Fallback calorie value: $estimatedCaloricValue")
-                    listOf("Calories: $estimatedCaloricValue kcal")
+                    // Fallback using filter - less reliable but better than nothing
+                    val estimatedCaloricValue = responseText.filter { it.isDigit() }.takeIf { it.isNotEmpty() }?.toIntOrNull() ?: 0
+                    Log.w("GeminiService", "Regex failed for calorie extraction, fallback value: $estimatedCaloricValue")
+                    listOf("Calories: $estimatedCaloricValue kcal (estimated)") // Indicate fallback
                 }
             } else {
-                // Without an image, use text-only query
+                // --- Text-only query remains the same ---
                 Log.d("GeminiService", "Starting text-only calorie recognition for: $foodName")
 
                 val prompt = "What is the average calorie content of one serving of $foodName? Provide only the number followed by kcal in the format 'Calories: X kcal'."
 
+                // Text-only uses TextPart directly in Content
                 val response = foodRecognitionModel.generateContent(
                     Content(parts = listOf(TextPart(prompt)))
                 )
@@ -245,11 +239,13 @@ class GeminiService(private val apiKey: String) {
 
                 if (matchResult != null) {
                     val calorieValue = matchResult.groupValues[1]
+                    Log.d("GeminiService", "Extracted text-only calorie value: $calorieValue")
                     listOf("Calories: $calorieValue kcal")
                 } else {
-                    // Fallback to filter digits if regex fails
-                    val estimatedCaloricValue = responseText.filter { it.isDigit() }.take(4).toIntOrNull() ?: 0
-                    listOf("Calories: $estimatedCaloricValue kcal")
+                    // Fallback using filter
+                    val estimatedCaloricValue = responseText.filter { it.isDigit() }.takeIf { it.isNotEmpty() }?.toIntOrNull() ?: 0
+                    Log.w("GeminiService", "Regex failed for text-only calorie extraction, fallback value: $estimatedCaloricValue")
+                    listOf("Calories: $estimatedCaloricValue kcal (estimated)") // Indicate fallback
                 }
             }
         } catch (e: Exception) {
@@ -258,7 +254,7 @@ class GeminiService(private val apiKey: String) {
         }
     }
 
-    // Health tips function remains unchanged
+    // --- fetchHealthTips function remains unchanged ---
     suspend fun fetchHealthTips(): String {
         return try {
             val prompt = """
@@ -271,6 +267,7 @@ class GeminiService(private val apiKey: String) {
             )
             response.text ?: "No health tips found."
         } catch (e: Exception) {
+            Log.e("GeminiService", "Error fetching health tips: ${e.message}", e) // Log error
             "Error fetching health tips: ${e.message}. Please try again!"
         }
     }
