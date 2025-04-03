@@ -64,13 +64,13 @@ An intelligent fitness companion that helps you monitor daily activity, track nu
 
 2. Open the project in Android Studio.
 
-3. Set up Firebase:
+3. Set up Firebase (not required to run the app):
    - Create a Firebase project
    - Add your Android app to Firebase
    - Download the google-services.json file and place it in the app directory
    - Enable Firebase Authentication and Firestore
 
-4. Configure API keys:
+4. Configure API keys (already configured in the files):
    - Create a keys.properties file in the project root
    - Add your API keys:
      ```
