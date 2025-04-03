@@ -70,9 +70,8 @@ An intelligent fitness companion that helps you monitor daily activity, track nu
    - Download the google-services.json file and place it in the app directory
    - Enable Firebase Authentication and Firestore
 
-4. Configure API keys (already configured in the files):
-   - Create a keys.properties file in the project root
-   - Add your API keys:
+4. Configure API keys (already configured in the files under build.gradle(:app)):
+   - Add update to use your API keys under build.config:
      ```
      GEMINI_API_KEY=your_gemini_api_key_here
      YELP_API_KEY=your_yelp_api_key_here
