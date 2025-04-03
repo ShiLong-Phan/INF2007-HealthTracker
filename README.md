@@ -59,7 +59,7 @@ An intelligent fitness companion that helps you monitor daily activity, track nu
 
 1. Clone the repository:
    ```
-   https://github.com/ShiLong-Phan/INF2007-HealthTracker.git](https://github.com/inf2007/inf2007-group-xyz-2025-code.git
+   https://github.com/inf2007/inf2007-group-xyz-2025-code.git
    ```
 
 2. Open the project in Android Studio.
