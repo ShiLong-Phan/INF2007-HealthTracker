@@ -57,14 +57,14 @@ fun StepCounter(user: FirebaseUser, onStepCountUpdated: (Int) -> Unit) {
 
     val stepsRef = firestore.collection("steps").document("${user.uid}_${lastDate}")
 
-    // 🕛 CHECK IF NEW DAY AND RESET
+    // Check if it is a new day and reset
     LaunchedEffect(Unit) {
         while (true) {
-            delay(60 * 1000) // Check every minute
+            delay(60 * 1000) // Checks every minute
 
             val currentDate = dateFormat.format(Date())
             if (currentDate != lastDate) {
-                // 🆕 New Day Detected: Reset Steps
+                // Reset Steps when it is a new day
                 lastDate = currentDate
                 initialStepCount = -1 // Reset initial step count
                 stepCount = 0
@@ -116,7 +116,6 @@ fun StepCounter(user: FirebaseUser, onStepCountUpdated: (Int) -> Unit) {
         }
     }
 
-    // UI Code remains unchanged
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Secondary)

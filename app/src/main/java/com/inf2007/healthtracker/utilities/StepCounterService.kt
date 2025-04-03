@@ -97,7 +97,7 @@ class StepCounterService : Service() {
     }
 }
 
-// Broadcast Receiver to Reset Steps at Midnight
+// Broadcast receiver to reset steps at midnight
 class MidnightResetReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         val sharedPreferences = context.getSharedPreferences("stepCounterPrefs", Context.MODE_PRIVATE)
